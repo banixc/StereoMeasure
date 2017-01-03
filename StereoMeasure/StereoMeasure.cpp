@@ -3,10 +3,15 @@
 
 #include "stdafx.h"
 #include "Camera.h"
+#include "WorkList.h"
+#include "saveVideo.h"
+
 
 int main()
-{
-	Camera::test();
+{	
+	//WorkList workList = WorkList();
+	//workList.start();
+	saveVideo();
     return 0;
 }
 
