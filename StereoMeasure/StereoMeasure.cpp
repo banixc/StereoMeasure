@@ -2,10 +2,11 @@
 //
 
 #include "stdafx.h"
-
+#include "Camera.h"
 
 int main()
 {
+	Camera::test();
     return 0;
 }
 
