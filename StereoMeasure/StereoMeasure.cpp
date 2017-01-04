@@ -3,13 +3,9 @@
 
 #include "stdafx.h"
 #include <string>
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
-#include "opencv2/opencv.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2\opencv.hpp>
 
 using namespace std;
 using namespace cv;
@@ -25,8 +21,8 @@ void on_mouse(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号
 }
 
 int main() {
-	cv::VideoCapture lCamera(0);
-	cv::VideoCapture RCamera(1);
+	VideoCapture lCamera(0);
+	VideoCapture RCamera(1);
 
 	if (!lCamera.isOpened()) { cout << "No left camera!" << endl; return -1; }
 	if (!RCamera.isOpened()) { cout << "No right camera!" << endl; return -1; }

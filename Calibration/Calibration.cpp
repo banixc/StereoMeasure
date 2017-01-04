@@ -2,16 +2,13 @@
 //
 #include "stdafx.h"
 #include <opencv2/opencv.hpp>
-#include <highgui.hpp>
-#include "cv.h"
-#include <cv.hpp>
 #include <iostream>
 
 using namespace std;
 using namespace cv;
 
-const int imageWidth = 640;								//摄像头的分辨率
-const int imageHeight = 480;
+int imageWidth = 0;								//摄像头的分辨率
+int imageHeight = 0;
 const int boardWidth = 7;								//横向的角点数目
 const int boardHeight = 7;								//纵向的角点数据
 const int boardCorner = boardWidth * boardHeight;		//总的角点数据
@@ -133,6 +130,9 @@ int main()
 		cin >> id;
 		capture.open(id);
 	}
+
+	imageWidth = capture.get(CAP_PROP_FRAME_WIDTH);
+	imageHeight = capture.get(CAP_PROP_FRAME_HEIGHT);
 
 	cout << "按下 c 来抓取一张图片\n按下 ESC 退出程序" << endl;
 
