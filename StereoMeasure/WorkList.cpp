@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "WorkList.h"
 
+using namespace std;
+using namespace cv;
 
 WorkList::WorkList()
 {
@@ -9,12 +11,6 @@ WorkList::WorkList()
 
 WorkList::~WorkList()
 {
-}
-
-void WorkList::setCamera()
-{
-	//lCamera = Camera(L_CAMERA_NAME, L_CAMERA_VALUE);
-	//rCamera = Camera(R_CAMERA_NAME, R_CAMERA_VALUE);
 }
 
 void WorkList::openCamera()
@@ -46,8 +42,12 @@ void WorkList::openCamera()
 	}
 }
 
+void WorkList::calibrate()
+{
+	//StereoCalibrate();
+}
+
 void WorkList::start()
 {
-	setCamera();
 	openCamera();
 }

@@ -33,6 +33,12 @@
     <ClInclude Include="saveVideo.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="calibration.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="stereoCalibration.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -48,6 +54,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="saveVideo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="calibration.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="stereoCalibration.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

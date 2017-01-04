@@ -20,8 +20,8 @@ public:
 
 	WorkList();
 	~WorkList();
-	void setCamera();
 	void openCamera();
+	void calibrate();
 	void start();
 private:
 	//Camera lCamera, rCamera;

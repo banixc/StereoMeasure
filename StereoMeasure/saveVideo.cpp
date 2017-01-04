@@ -15,7 +15,7 @@ double fps = 30;
 void saveVideo()
 {
 	VideoCapture capturel(L_ID);
-	VideoCapture capturer(R_CAMERA_VALUE);
+	VideoCapture capturer(R_ID);
 
 	//FPS
 	double rate = capturer.get(CV_CAP_PROP_FPS);
