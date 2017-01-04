@@ -14,34 +14,24 @@
 using namespace std;
 using namespace cv;
 
-//const int imageWidth = 640;								//摄像头的分辨率
-//const int imageHeight = 480;
-
+#define USE_SGBM true
+#define USE_BM false
 
 void on_mouse(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号，x,y鼠标坐标，flags拖拽和键盘操作的代号  
 {
-	static Point pt = (-1, -1);//初始坐标
 	if (event == CV_EVENT_LBUTTONUP) {
 		cout << x << " " << y << endl;
 	}
 }
 
 int main() {
-	cv::VideoCapture camera_l(0);
-	cv::VideoCapture camera_r(1);
+	cv::VideoCapture lCamera(0);
+	cv::VideoCapture RCamera(1);
 
-	//camera_l.set(CAP_PROP_FRAME_WIDTH, imageWidth);
-	//camera_l.set(CAP_PROP_FRAME_HEIGHT, imageHeight);
-	//camera_r.set(CAP_PROP_FRAME_WIDTH, imageWidth);
-	//camera_r.set(CAP_PROP_FRAME_HEIGHT, imageHeight);
-
-	if (!camera_l.isOpened()) { cout << "No left camera!" << endl; return -1; }
-	if (!camera_r.isOpened()) { cout << "No right camera!" << endl; return -1; }
-
-
+	if (!lCamera.isOpened()) { cout << "No left camera!" << endl; return -1; }
+	if (!RCamera.isOpened()) { cout << "No right camera!" << endl; return -1; }
 
 	Mat cameraMatrix[2], distCoeffs[2];
-
 
 	FileStorage fs("..\\intrinsics.yml", FileStorage::READ);
 	if (fs.isOpened())
@@ -53,12 +43,12 @@ int main() {
 		fs.release();
 	}
 	else
-		cout << "Error: can not save the intrinsic parameters\n";
+		cout << "Error: can not load the intrinsic parameters\n";
 
 	Mat R, T, E, F;
 	Mat R1, R2, P1, P2, Q;
 	Rect validRoi[2];
-	Size imageSize(camera_l.get(CAP_PROP_FRAME_WIDTH), camera_l.get(CAP_PROP_FRAME_HEIGHT));
+	Size imageSize(lCamera.get(CAP_PROP_FRAME_WIDTH), lCamera.get(CAP_PROP_FRAME_HEIGHT));
 
 	fs.open("..\\extrinsics.yml", FileStorage::READ);
 	if (fs.isOpened())
@@ -73,7 +63,7 @@ int main() {
 		fs.release();
 	}
 	else
-		cout << "Error: can not save the extrinsic parameters\n";
+		cout << "Error: can not load the extrinsic parameters\n";
 
 	stereoRectify(cameraMatrix[0], distCoeffs[0],
 		cameraMatrix[1], distCoeffs[1],
@@ -110,8 +100,7 @@ int main() {
 		canvas.create(h * 2, w, CV_8UC3);
 	}
 
-	cv::Mat frame_l, frame_r;
-	Mat imgLeft, imgRight;
+	Mat lSrc, rSrc, lImg, rImg;
 
 	int ndisparities = 16 * 5;   /**< Range of disparity */
 	int SADWindowSize = 31; /**< Size of the block window. Must be odd */
@@ -136,23 +125,20 @@ int main() {
 	Mat Mask;
 	while (1)
 	{
-		camera_l >> frame_l;
-		camera_r >> frame_r;
+		lCamera >> lSrc;
+		RCamera >> rSrc;
 
-		if (frame_l.empty() || frame_r.empty())
+		if (lSrc.empty() || rSrc.empty())
 			continue;
 
-		imshow("L", frame_l);
-		imshow("R", frame_r);
-
-		remap(frame_l, rimg, rmap[0][0], rmap[0][1], INTER_LINEAR);
+		remap(lSrc, rimg, rmap[0][0], rmap[0][1], INTER_LINEAR);
 		rimg.copyTo(cimg);
 		Mat canvasPart1 = !isVerticalStereo ? canvas(Rect(w * 0, 0, w, h)) : canvas(Rect(0, h * 0, w, h));
 		resize(cimg, canvasPart1, canvasPart1.size(), 0, 0, INTER_AREA);
 		Rect vroi1(cvRound(validRoi[0].x*sf), cvRound(validRoi[0].y*sf),
 			cvRound(validRoi[0].width*sf), cvRound(validRoi[0].height*sf));
 
-		remap(frame_r, rimg, rmap[1][0], rmap[1][1], INTER_LINEAR);
+		remap(rSrc, rimg, rmap[1][0], rmap[1][1], INTER_LINEAR);
 		rimg.copyTo(cimg);
 		Mat canvasPart2 = !isVerticalStereo ? canvas(Rect(w * 1, 0, w, h)) : canvas(Rect(0, h * 1, w, h));
 		resize(cimg, canvasPart2, canvasPart2.size(), 0, 0, INTER_AREA);
@@ -161,11 +147,12 @@ int main() {
 
 		Rect vroi = vroi1&vroi2;
 
-		imgLeft = canvasPart1(vroi).clone();
-		imgRight = canvasPart2(vroi).clone();
+		lImg = canvasPart1(vroi).clone();
+		rImg = canvasPart2(vroi).clone();
 
+		//标记区域
 		rectangle(canvasPart1, vroi1, Scalar(0, 0, 255), 3, 8);
-		rectangle(canvasPart2, vroi2, Scalar(0, 0, 255), 3, 8);
+		rectangle(canvasPart2, vroi2, Scalar(255, 0, 0), 3, 8);
 
 		if (!isVerticalStereo)
 			for (int j = 0; j < canvas.rows; j += 32)
@@ -174,44 +161,52 @@ int main() {
 			for (int j = 0; j < canvas.cols; j += 32)
 				line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
 
+		imshow("rectified", canvas);
 
-		cvtColor(imgLeft, imgLeft, CV_BGR2GRAY);
-		cvtColor(imgRight, imgRight, CV_BGR2GRAY);
+
+		cvtColor(lImg, lImg, CV_BGR2GRAY);
+		cvtColor(rImg, rImg, CV_BGR2GRAY);
 
 
 		//-- And create the image in which we will save our disparities
-		Mat imgDisparity16S = Mat(imgLeft.rows, imgLeft.cols, CV_16S);
-		Mat imgDisparity8U = Mat(imgLeft.rows, imgLeft.cols, CV_8UC1);
-		Mat sgbmDisp16S = Mat(imgLeft.rows, imgLeft.cols, CV_16S);
-		Mat sgbmDisp8U = Mat(imgLeft.rows, imgLeft.cols, CV_8UC1);
+		Mat imgDisparity16S = Mat(lImg.rows, lImg.cols, CV_16S);
+		Mat imgDisparity8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
+		Mat sgbmDisp16S = Mat(lImg.rows, lImg.cols, CV_16S);
+		Mat sgbmDisp8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
 
-		if (imgLeft.empty() || imgRight.empty())
+		if (lImg.empty() || rImg.empty())
 		{
-			std::cout << " --(!) Error reading images " << std::endl; return -1;
+			cout << " --(!) Error reading images " << endl;
+			return -1;
 		}
 
-		sbm->compute(imgLeft, imgRight, imgDisparity16S);
+		if (USE_BM) {
+			sbm->compute(lImg, rImg, imgDisparity16S);
 
-		imgDisparity16S.convertTo(imgDisparity8U, CV_8UC1, 255.0 / 1000.0);
-		cv::compare(imgDisparity16S, 0, Mask, CMP_GE);
-		applyColorMap(imgDisparity8U, imgDisparity8U, COLORMAP_HSV);
-		Mat disparityShow;
-		imgDisparity8U.copyTo(disparityShow, Mask);
+			imgDisparity16S.convertTo(imgDisparity8U, CV_8UC1, 255.0 / 1000.0);
+			compare(imgDisparity16S, 0, Mask, CMP_GE);
+			applyColorMap(imgDisparity8U, imgDisparity8U, COLORMAP_HSV);
+			Mat disparityShow;
+			imgDisparity8U.copyTo(disparityShow, Mask);
+			imshow("bmDisparity", disparityShow);
+			setMouseCallback("bmDisparity", on_mouse, 0);
 
-		sgbm->compute(imgLeft, imgRight, sgbmDisp16S);
+		}
 
-		sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
-		cv::compare(sgbmDisp16S, 0, Mask, CMP_GE);
-		applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
-		Mat  sgbmDisparityShow;
-		sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
+		if (USE_SGBM) {
+			sgbm->compute(lImg, rImg, sgbmDisp16S);
 
-		imshow("bmDisparity", disparityShow);
-		imshow("sgbmDisparity", sgbmDisparityShow);
-		setMouseCallback("sgbmDisparity", on_mouse, 0);
-		imshow("rectified", canvas);
-		char c = (char)waitKey(1);
-		if (c == 27 || c == 'q' || c == 'Q')
+			sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
+			compare(sgbmDisp16S, 0, Mask, CMP_GE);
+			applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
+			Mat sgbmDisparityShow;
+			sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
+
+			imshow("sgbmDisparity", sgbmDisparityShow);
+			setMouseCallback("sgbmDisparity", on_mouse, 0);
+		}
+		char c = waitKey(1);
+		if (c == 27)
 			break;
 	}
 	return 0;
