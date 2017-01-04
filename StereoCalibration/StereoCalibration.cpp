@@ -24,6 +24,7 @@ const Size boardSize = Size(boardWidth, boardHeight);	//
 Size imageSize = Size(imageWidth, imageHeight);
 
 int lid, rid;
+bool saved = false;
 
 Mat R, T, E, F;											//R 旋转矢量 T平移矢量 E本征矩阵 F基础矩阵
 vector<Mat> rvecs;									    //旋转向量
@@ -124,6 +125,7 @@ void calRealPoint(vector<vector<Point3f>>& obj, int boardwidth, int boardheight,
 
 void outputCameraParam(void)
 {
+	
 	/*保存数据*/
 	/*输出数据*/
 	FileStorage fs("..\\intrinsics.yml", FileStorage::WRITE);
@@ -147,6 +149,7 @@ void outputCameraParam(void)
 	}
 	else
 		cout << "Error: can not save the extrinsic parameters\n";
+	saved = true;
 }
 
 
@@ -266,65 +269,79 @@ int main()
 	initUndistortRectifyMap(cameraMatrixL, distCoeffL, Rl, Pr, imageSize, CV_32FC1, mapLx, mapLy);
 	initUndistortRectifyMap(cameraMatrixR, distCoeffR, Rr, Pr, imageSize, CV_32FC1, mapRx, mapRy);
 
+	/*保存并输出数据*/
+	outputCameraParam();
+
+
 	destroyWindow("Camera L");
 	destroyWindow("Camera R");
 	destroyWindow("Chessboard L");
 	destroyWindow("Chessboard R");
 
 	Mat rectifyImageL, rectifyImageR;
-	cvtColor(grayImageL, rectifyImageL, CV_GRAY2BGR);
-	cvtColor(grayImageR, rectifyImageR, CV_GRAY2BGR);
 
-	imshow("Before Rectify L", rectifyImageL);
-	imshow("Before Rectify R", rectifyImageR);
+	while (true) {
+		lCapture >> rectifyImageL;
+		rCapture >> rectifyImageR;
+
+		remap(rectifyImageL, rectifyImageL, mapLx, mapLy, INTER_LINEAR);
+		remap(rectifyImageR, rectifyImageR, mapRx, mapRy, INTER_LINEAR);
+
+		/*
+		把校正结果显示出来
+		把左右两幅图像显示到同一个画面上
+		这里只显示了最后一副图像的校正结果。并没有把所有的图像都显示出来
+		*/
+		Mat canvas;
+		double sf;
+		int w, h;
+		sf = 600. / MAX(imageSize.width, imageSize.height);
+		w = cvRound(imageSize.width * sf);
+		h = cvRound(imageSize.height * sf);
+		canvas.create(h, w * 2, CV_8UC3);
+
+		/*左图像画到画布上*/
+		Mat canvasPart = canvas(Rect(w * 0, 0, w, h));								//得到画布的一部分
+		resize(rectifyImageL, canvasPart, canvasPart.size(), 0, 0, INTER_AREA);		//把图像缩放到跟canvasPart一样大小
+		Rect vroiL(cvRound(validROIL.x*sf), cvRound(validROIL.y*sf),				//获得被截取的区域	
+			cvRound(validROIL.width*sf), cvRound(validROIL.height*sf));
+		rectangle(canvasPart, vroiL, Scalar(0, 0, 255), 3, 8);						//画上一个矩形
+
+		//cout << "Painted ImageL" << endl;
+
+																					/*右图像画到画布上*/
+		canvasPart = canvas(Rect(w, 0, w, h));										//获得画布的另一部分
+		resize(rectifyImageR, canvasPart, canvasPart.size(), 0, 0, INTER_LINEAR);
+		Rect vroiR(cvRound(validROIR.x * sf), cvRound(validROIR.y*sf),
+			cvRound(validROIR.width * sf), cvRound(validROIR.height * sf));
+		rectangle(canvasPart, vroiR, Scalar(0, 255, 0), 3, 8);
+
+		//cout << "Painted ImageR" << endl;
+
+		/*画上对应的线条*/
+		for (int i = 0; i < canvas.rows; i += 16)
+			line(canvas, Point(0, i), Point(canvas.cols, i), Scalar(0, 255, 0), 1, 8);
+
+		imshow("Rectified", canvas);
+		char c = waitKey(1);
+		if (c == 27)
+			break;
+	}
+
+	//cvtColor(grayImageL, rectifyImageL, CV_GRAY2BGR);
+	//cvtColor(grayImageR, rectifyImageR, CV_GRAY2BGR);
+
+	//imshow("Before Rectify L", rectifyImageL);
+	//imshow("Before Rectify R", rectifyImageR);
 	/*
 	经过remap之后，左右相机的图像已经共面并且行对准了
 	*/
-	remap(rectifyImageL, rectifyImageL, mapLx, mapLy, INTER_LINEAR);
-	remap(rectifyImageR, rectifyImageR, mapRx, mapRy, INTER_LINEAR);
+
 
 	//imshow("After Rectify L", rectifyImageL);
 	//imshow("After Rectify R", rectifyImageR);
 
-	/*保存并输出数据*/
-	outputCameraParam();
 
-	/*
-	把校正结果显示出来
-	把左右两幅图像显示到同一个画面上
-	这里只显示了最后一副图像的校正结果。并没有把所有的图像都显示出来
-	*/
-	Mat canvas;
-	double sf;
-	int w, h;
-	sf = 600. / MAX(imageSize.width, imageSize.height);
-	w = cvRound(imageSize.width * sf);
-	h = cvRound(imageSize.height * sf);
-	canvas.create(h, w * 2, CV_8UC3);
 
-	/*左图像画到画布上*/
-	Mat canvasPart = canvas(Rect(w * 0, 0, w, h));								//得到画布的一部分
-	resize(rectifyImageL, canvasPart, canvasPart.size(), 0, 0, INTER_AREA);		//把图像缩放到跟canvasPart一样大小
-	Rect vroiL(cvRound(validROIL.x*sf), cvRound(validROIL.y*sf),				//获得被截取的区域	
-		cvRound(validROIL.width*sf), cvRound(validROIL.height*sf));
-	rectangle(canvasPart, vroiL, Scalar(0, 0, 255), 3, 8);						//画上一个矩形
-
-	//cout << "Painted ImageL" << endl;
-
-	/*右图像画到画布上*/
-	canvasPart = canvas(Rect(w, 0, w, h));										//获得画布的另一部分
-	resize(rectifyImageR, canvasPart, canvasPart.size(), 0, 0, INTER_LINEAR);
-	Rect vroiR(cvRound(validROIR.x * sf), cvRound(validROIR.y*sf),
-		cvRound(validROIR.width * sf), cvRound(validROIR.height * sf));
-	rectangle(canvasPart, vroiR, Scalar(0, 255, 0), 3, 8);
-
-	//cout << "Painted ImageR" << endl;
-
-	/*画上对应的线条*/
-	for (int i = 0; i < canvas.rows; i += 16)
-		line(canvas, Point(0, i), Point(canvas.cols, i), Scalar(0, 255, 0), 1, 8);
-
-	imshow("Rectified", canvas);
-	waitKey(0);
 	return 0;
 }
