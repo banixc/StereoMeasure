@@ -17,6 +17,15 @@ using namespace cv;
 //const int imageWidth = 640;								//摄像头的分辨率
 //const int imageHeight = 480;
 
+
+void on_mouse(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号，x,y鼠标坐标，flags拖拽和键盘操作的代号  
+{
+	static Point pt = (-1, -1);//初始坐标
+	if (event == CV_EVENT_LBUTTONUP) {
+		cout << x << " " << y << endl;
+	}
+}
+
 int main() {
 	cv::VideoCapture camera_l(0);
 	cv::VideoCapture camera_r(1);
@@ -34,7 +43,7 @@ int main() {
 	Mat cameraMatrix[2], distCoeffs[2];
 
 
-	FileStorage fs("intrinsics.yml", FileStorage::READ);
+	FileStorage fs("..\\intrinsics.yml", FileStorage::READ);
 	if (fs.isOpened())
 	{
 		fs["cameraMatrixL"] >> cameraMatrix[0];
@@ -51,7 +60,7 @@ int main() {
 	Rect validRoi[2];
 	Size imageSize(camera_l.get(CAP_PROP_FRAME_WIDTH), camera_l.get(CAP_PROP_FRAME_HEIGHT));
 
-	fs.open("extrinsics.yml", FileStorage::READ);
+	fs.open("..\\extrinsics.yml", FileStorage::READ);
 	if (fs.isOpened())
 	{
 		fs["R"] >> R;
@@ -199,6 +208,7 @@ int main() {
 
 		imshow("bmDisparity", disparityShow);
 		imshow("sgbmDisparity", sgbmDisparityShow);
+		setMouseCallback("sgbmDisparity", on_mouse, 0);
 		imshow("rectified", canvas);
 		char c = (char)waitKey(1);
 		if (c == 27 || c == 'q' || c == 'Q')

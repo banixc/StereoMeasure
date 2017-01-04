@@ -84,7 +84,7 @@ void outputCameraParam(void)
 {
 	/*保存数据*/
 	/*输出数据*/
-	FileStorage fs("intrinsics.yml", FileStorage::WRITE);
+	FileStorage fs("..\\intrinsics.yml", FileStorage::WRITE);
 	if (fs.isOpened())
 	{
 		fs << "cameraMatrixL" << cameraMatrixL << "cameraDistcoeffL" << distCoeffL << "cameraMatrixR" << cameraMatrixR << "cameraDistcoeffR" << distCoeffR;
@@ -96,7 +96,7 @@ void outputCameraParam(void)
 		cout << "Error: can not save the intrinsics!!!!!" << endl;
 	}
 
-	fs.open("extrinsics.yml", FileStorage::WRITE);
+	fs.open("..\\extrinsics.yml", FileStorage::WRITE);
 	if (fs.isOpened())
 	{
 		fs << "R" << R << "T" << T << "Rl" << Rl << "Rr" << Rr << "Pl" << Pl << "Pr" << Pr << "Q" << Q;
@@ -132,8 +132,8 @@ int main()
 	
 		cvtColor(rgbImageL, grayImageL, CV_BGR2GRAY);
 		cvtColor(rgbImageR, grayImageR, CV_BGR2GRAY);
-		imshow("LGRAY", rgbImageL);
-		imshow("RGRAY", rgbImageR);
+		imshow("LIMG", rgbImageL);
+		imshow("RIMG", rgbImageR);
 
 		char c = waitKey(10);
 
@@ -169,16 +169,6 @@ int main()
 				所以这里就没有判断
 				*/
 				goodFrameCount++;
-
-				string filenameL = "..\\image\\calibrationL";
-				filenameL += goodFrameCount;
-				filenameL += ".jpg";
-				imwrite(filenameL.c_str(), rgbImageL);		//把合格的图片保存起来
-
-				string filenameR = "..\\image\\calibrationR";
-				filenameR += goodFrameCount;
-				filenameR += ".jpg";
-				imwrite(filenameR.c_str(), rgbImageR);		//把合格的图片保存起来
 
 				cout << "The " << goodFrameCount << "/" << frameNumber << " image is good" << endl;
 			}
