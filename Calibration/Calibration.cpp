@@ -19,6 +19,8 @@ const int frameNumber = 10;								//相机标定时需要采用的图像帧数
 const int squareSize = 20;								//标定板黑白格子的大小 单位mm
 const Size boardSize = Size(boardWidth, boardHeight);	//
 
+int id;													//摄像机序号
+
 Mat intrinsic;											//相机内参数
 Mat distortion_coeff;									//相机畸变参数
 vector<Mat> rvecs;									    //旋转向量
@@ -87,20 +89,32 @@ void guessCameraParam(void)
 
 void outputCameraParam(void)
 {
-	/*保存数据*/
-	//cvSave("cameraMatrix.xml", &intrinsic);
-	//cvSave("cameraDistoration.xml", &distortion_coeff);
-	//cvSave("rotatoVector.xml", &rvecs);
-	//cvSave("translationVector.xml", &tvecs);
 	/*输出数据*/
-	cout << "fx :" << intrinsic.at<double>(0, 0) << endl << "fy :" << intrinsic.at<double>(1, 1) << endl;
-	cout << "cx :" << intrinsic.at<double>(0, 2) << endl << "cy :" << intrinsic.at<double>(1, 2) << endl;
+	char filename[64];
+	sprintf_s(filename,64,"..\\Camera%d.yml",id);
+	FileStorage fs(filename, FileStorage::WRITE);
+	if (fs.isOpened())
+	{
+		fs << "fx" << intrinsic.at<double>(0, 0) << "fy" << intrinsic.at<double>(1, 1)
+			<< "cx" << intrinsic.at<double>(0, 2) << "cy" << intrinsic.at<double>(1, 2)
+			<< "k1" << distortion_coeff.at<double>(0, 0)
+			<< "k2" << distortion_coeff.at<double>(1, 0)
+			<< "p1" << distortion_coeff.at<double>(2, 0) 
+			<< "p2" << distortion_coeff.at<double>(3, 0)
+			<< "p3" << distortion_coeff.at<double>(4, 0);
+		fs.release();
+	}
+	else {
+		cout << "Can't open file:" << filename << endl;
+		cout << "fx :" << intrinsic.at<double>(0, 0) << endl << "fy :" << intrinsic.at<double>(1, 1) << endl;
+		cout << "cx :" << intrinsic.at<double>(0, 2) << endl << "cy :" << intrinsic.at<double>(1, 2) << endl;
 
-	cout << "k1 :" << distortion_coeff.at<double>(0, 0) << endl;
-	cout << "k2 :" << distortion_coeff.at<double>(1, 0) << endl;
-	cout << "p1 :" << distortion_coeff.at<double>(2, 0) << endl;
-	cout << "p2 :" << distortion_coeff.at<double>(3, 0) << endl;
-	cout << "p3 :" << distortion_coeff.at<double>(4, 0) << endl;
+		cout << "k1 :" << distortion_coeff.at<double>(0, 0) << endl;
+		cout << "k2 :" << distortion_coeff.at<double>(1, 0) << endl;
+		cout << "p1 :" << distortion_coeff.at<double>(2, 0) << endl;
+		cout << "p2 :" << distortion_coeff.at<double>(3, 0) << endl;
+		cout << "p3 :" << distortion_coeff.at<double>(4, 0) << endl;
+	}
 }
 
 
@@ -110,7 +124,6 @@ int main()
 	int goodFrameCount = 0;
 
 	cout << "请输入要标定的摄像头序列号：";
-	int id;
 	cin >> id;
 
 	VideoCapture capture(id);
