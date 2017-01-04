@@ -5,8 +5,7 @@
 #define L_CAMERA_NAME "左摄像头"
 #define R_CAMERA_NAME "右摄像头"
 
-#define L_CAMERA_VALUE "D:\\Desktop\\StereoMeasure\\Rescoures\\1.mp4"
-#define R_CAMERA_VALUE "D:\\Desktop\\StereoMeasure\\Rescoures\\2.mp4"
+
 
 #define CAMERA_WINDOW "摄像机界面"
 

@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{F71CDE9D-0E43-485A-817D-44E0B6216A4E}</ProjectGuid>
+    <ProjectGuid>{C4E53847-A17F-470C-B047-F54A65AF6FAC}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>StereoMeasure</RootNamespace>
+    <RootNamespace>StereoCalibration</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -158,7 +158,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="StereoMeasure.cpp" />
+    <ClCompile Include="StereoCalibration.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,5 +1,7 @@
+// StereoCalibration.cpp : ¶¨Òå¿ØÖÆÌ¨Ó¦ÓÃ³ÌĞòµÄÈë¿Úµã¡£
+//
+
 #include "stdafx.h"
-#include "stereoCalibration.h"
 #include <opencv2/opencv.hpp>
 #include <highgui.hpp>
 #include "cv.h"
@@ -16,10 +18,10 @@ using namespace cv;
 
 const int imageWidth = 640;								//ÉãÏñÍ·µÄ·Ö±æÂÊ
 const int imageHeight = 480;
-const int boardWidth = 9;								//ºáÏòµÄ½ÇµãÊıÄ¿
-const int boardHeight = 6;								//×İÏòµÄ½ÇµãÊı¾İ
+const int boardWidth = 7;								//ºáÏòµÄ½ÇµãÊıÄ¿
+const int boardHeight = 7;								//×İÏòµÄ½ÇµãÊı¾İ
 const int boardCorner = boardWidth * boardHeight;		//×ÜµÄ½ÇµãÊı¾İ
-const int frameNumber = 8;								//Ïà»ú±ê¶¨Ê±ĞèÒª²ÉÓÃµÄÍ¼ÏñÖ¡Êı
+const int frameNumber = 10;								//Ïà»ú±ê¶¨Ê±ĞèÒª²ÉÓÃµÄÍ¼ÏñÖ¡Êı
 const int squareSize = 20;								//±ê¶¨°åºÚ°×¸ñ×ÓµÄ´óĞ¡ µ¥Î»mm
 const Size boardSize = Size(boardWidth, boardHeight);	//
 Size imageSize = Size(imageWidth, imageHeight);
@@ -42,26 +44,21 @@ Mat Rl, Rr, Pl, Pr, Q;									//Ğ£ÕıĞı×ª¾ØÕóR£¬Í¶Ó°¾ØÕóP ÖØÍ¶Ó°¾ØÕóQ (ÏÂÃæÓĞ¾ßÌ
 Mat mapLx, mapLy, mapRx, mapRy;							//Ó³Éä±í
 Rect validROIL, validROIR;								//Í¼ÏñĞ£ÕıÖ®ºó£¬»á¶ÔÍ¼Ïñ½øĞĞ²Ã¼ô£¬ÕâÀïµÄvalidROI¾ÍÊÇÖ¸²Ã¼ôÖ®ºóµÄÇøÓò
 
-														/*
-														ÊÂÏÈ±ê¶¨ºÃµÄ×óÏà»úµÄÄÚ²Î¾ØÕó
-														fx 0 cx
-														0 fy cy
-														0 0  1
-														*/
-Mat cameraMatrixL = (Mat_<double>(3, 3) << 532.782, 0, 532.904,
-	0, 342.505, 233.876,
-	0, 0, 1);
-Mat distCoeffL = (Mat_<double>(5, 1) << -0.28095, 0.0255745, 0.00122226, -0.000137736, 0.162946);
 /*
-ÊÂÏÈ±ê¶¨ºÃµÄÓÒÏà»úµÄÄÚ²Î¾ØÕó
+ÊÂÏÈ±ê¶¨ºÃµÄÏà»úµÄÄÚ²Î¾ØÕó
 fx 0 cx
 0 fy cy
 0 0  1
 */
-Mat cameraMatrixR = (Mat_<double>(3, 3) << 532.782, 0, 532.904,
-	0, 342.505, 233.876,
+Mat cameraMatrixR = (Mat_<double>(3, 3) << 968.059, 0, 306.322,
+	0, 961.636, 244.942,
 	0, 0, 1);
-Mat distCoeffR = (Mat_<double>(5, 1) << -0.28095, 0.0255745, 0.00122226, -0.000137736, 0.162946);
+Mat distCoeffR = (Mat_<double>(5, 1) << -0.103784, -0.202263, 0.104774, -0.0469157, 13.4434);
+
+Mat cameraMatrixL = (Mat_<double>(3, 3) << 559.487, 0, 258.475,
+	0, 567.63, 356.153,
+	0, 0, 1);
+Mat distCoeffL = (Mat_<double>(5, 1) << 0.0191248, -1.65525, 0.0216601, 0.00214742, 4.64856);
 
 
 /*¼ÆËã±ê¶¨°åÉÏÄ£¿éµÄÊµ¼ÊÎïÀí×ø±ê*/
@@ -111,68 +108,87 @@ void outputCameraParam(void)
 }
 
 
-int t()
+int main()
 {
-	Mat img;
+	cout << "½øĞĞË«Ä¿±ê¶¨£¬ÇëÏÈÈ·ÈÏÒÑ½øĞĞµ¥Ä¿±ê¶¨\nÇëÊäÈë×óÉãÏñÍ·ºÍÓÒÉãÏñÍ·µÄID£º";
+	int lid, rid;
+	cin >> lid >> rid;
+	VideoCapture lCapture(lid);
+	VideoCapture rCapture(rid);
+
+	while (!lCapture.isOpened() || !rCapture.isOpened()) {
+		cout << "×óÉãÏñÍ·´ò¿ª£º" << lCapture.isOpened() << " ÓÒÉãÏñÍ·´ò¿ª£º" << rCapture.isOpened() << " ÇëÖØÊÔ£º";
+		cin >> lid >> rid;
+		lCapture.open(lid);
+		rCapture.open(rid);
+	}
+
+	cout << "°´ÏÂ c À´×¥È¡Ò»ÕÅÍ¼Æ¬\n°´ÏÂ ESC ÍË³ö³ÌĞò" << endl;
+
 	int goodFrameCount = 0;
-	namedWindow("ImageL");
-	namedWindow("ImageR");
-	cout << "°´QÍË³ö ..." << endl;
-	while (goodFrameCount < frameNumber)
-	{
-		char filename[100];
-		/*¶ÁÈ¡×ó±ßµÄÍ¼Ïñ*/
-		sprintf_s(filename, "D:\\Desktop\\StereoMeasure\\image\\left%02d.jpg", goodFrameCount + 1);
-		rgbImageL = imread(filename, CV_LOAD_IMAGE_COLOR);
+	while (goodFrameCount < frameNumber) {
+		lCapture >> rgbImageL;
+		rCapture >> rgbImageR;
+	
 		cvtColor(rgbImageL, grayImageL, CV_BGR2GRAY);
-
-		/*¶ÁÈ¡ÓÒ±ßµÄÍ¼Ïñ*/
-		sprintf_s(filename, "D:\\Desktop\\StereoMeasure\\image\\right%02d.jpg", goodFrameCount + 1);
-		rgbImageR = imread(filename, CV_LOAD_IMAGE_COLOR);
 		cvtColor(rgbImageR, grayImageR, CV_BGR2GRAY);
+		imshow("LGRAY", rgbImageL);
+		imshow("RGRAY", rgbImageR);
 
-		bool isFindL, isFindR;
+		char c = waitKey(10);
 
-		isFindL = findChessboardCorners(rgbImageL, boardSize, cornerL);
-		isFindR = findChessboardCorners(rgbImageR, boardSize, cornerR);
-		if (isFindL == true && isFindR == true)	 //Èç¹ûÁ½·ùÍ¼Ïñ¶¼ÕÒµ½ÁËËùÓĞµÄ½Çµã ÔòËµÃ÷ÕâÁ½·ùÍ¼ÏñÊÇ¿ÉĞĞµÄ
-		{
-			/*
-			Size(5,5) ËÑË÷´°¿ÚµÄÒ»°ë´óĞ¡
-			Size(-1,-1) ËÀÇøµÄÒ»°ë³ß´ç
-			TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1)µü´úÖÕÖ¹Ìõ¼ş
-			*/
-			cornerSubPix(grayImageL, cornerL, Size(5, 5), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1));
-			drawChessboardCorners(rgbImageL, boardSize, cornerL, isFindL);
-			imshow("chessboardL", rgbImageL);
-			imagePointL.push_back(cornerL);
+		if (c == 27) //ÍË³ö
+			return 0;
+		else if (c == 'c') {//ÅÄÕÕ²¢¼ì²â
+
+			bool isFindL, isFindR;
+
+			isFindL = findChessboardCorners(rgbImageL, boardSize, cornerL);
+			isFindR = findChessboardCorners(rgbImageR, boardSize, cornerR);
+			if (isFindL && isFindR )	 //Èç¹ûÁ½·ùÍ¼Ïñ¶¼ÕÒµ½ÁËËùÓĞµÄ½Çµã ÔòËµÃ÷ÕâÁ½·ùÍ¼ÏñÊÇ¿ÉĞĞµÄ
+			{
+				/*
+				Size(5,5) ËÑË÷´°¿ÚµÄÒ»°ë´óĞ¡
+				Size(-1,-1) ËÀÇøµÄÒ»°ë³ß´ç
+				TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1)µü´úÖÕÖ¹Ìõ¼ş
+				*/
+				cornerSubPix(grayImageL, cornerL, Size(5, 5), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1));
+				drawChessboardCorners(rgbImageL, boardSize, cornerL, isFindL);
+				imshow("chessboardL", rgbImageL);
+				imagePointL.push_back(cornerL);
 
 
-			cornerSubPix(grayImageR, cornerR, Size(5, 5), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1));
-			drawChessboardCorners(rgbImageR, boardSize, cornerR, isFindR);
-			imshow("chessboardR", rgbImageR);
-			imagePointR.push_back(cornerR);
+				cornerSubPix(grayImageR, cornerR, Size(5, 5), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1));
+				drawChessboardCorners(rgbImageR, boardSize, cornerR, isFindR);
+				imshow("chessboardR", rgbImageR);
+				imagePointR.push_back(cornerR);
 
-			/*
-			±¾À´Ó¦¸ÃÅĞ¶ÏÕâÁ½·ùÍ¼ÏñÊÇ²»ÊÇºÃµÄ£¬Èç¹û¿ÉÒÔÆ¥ÅäµÄ»°²Å¿ÉÒÔÓÃÀ´±ê¶¨
-			µ«ÊÇÔÚÕâ¸öÀı³Ìµ±ÖĞ£¬ÓÃµÄÍ¼ÏñÊÇÏµÍ³×Ô´øµÄÍ¼Ïñ£¬¶¼ÊÇ¿ÉÒÔÆ¥Åä³É¹¦µÄ¡£
-			ËùÒÔÕâÀï¾ÍÃ»ÓĞÅĞ¶Ï
-			*/
-			//string filename = "res\\image\\calibration";
-			//filename += goodFrameCount + ".jpg";
-			//cvSaveImage(filename.c_str(), &IplImage(rgbImage));		//°ÑºÏ¸ñµÄÍ¼Æ¬±£´æÆğÀ´
-			goodFrameCount++;
-			cout << "The image is good" << endl;
+				/*
+				±¾À´Ó¦¸ÃÅĞ¶ÏÕâÁ½·ùÍ¼ÏñÊÇ²»ÊÇºÃµÄ£¬Èç¹û¿ÉÒÔÆ¥ÅäµÄ»°²Å¿ÉÒÔÓÃÀ´±ê¶¨
+				µ«ÊÇÔÚÕâ¸öÀı³Ìµ±ÖĞ£¬ÓÃµÄÍ¼ÏñÊÇÏµÍ³×Ô´øµÄÍ¼Ïñ£¬¶¼ÊÇ¿ÉÒÔÆ¥Åä³É¹¦µÄ¡£
+				ËùÒÔÕâÀï¾ÍÃ»ÓĞÅĞ¶Ï
+				*/
+				goodFrameCount++;
+
+				string filenameL = "..\\image\\calibrationL";
+				filenameL += goodFrameCount;
+				filenameL += ".jpg";
+				imwrite(filenameL.c_str(), rgbImageL);		//°ÑºÏ¸ñµÄÍ¼Æ¬±£´æÆğÀ´
+
+				string filenameR = "..\\image\\calibrationR";
+				filenameR += goodFrameCount;
+				filenameR += ".jpg";
+				imwrite(filenameR.c_str(), rgbImageR);		//°ÑºÏ¸ñµÄÍ¼Æ¬±£´æÆğÀ´
+
+				cout << "The " << goodFrameCount << "/" << frameNumber << " image is good" << endl;
+			}
+			else
+			{
+				cout << "The " << (isFindL?"R":"L") << " image is bad please try again" << endl;
+			}
+
 		}
-		else
-		{
-			cout << "The image is bad please try again" << endl;
-		}
 
-		if (waitKey(10) == 'q')
-		{
-			break;
-		}
 	}
 
 	/*

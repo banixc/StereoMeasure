@@ -4,6 +4,9 @@
 using namespace std;
 using namespace cv;
 
+#define L_CAMERA_VALUE 1
+#define R_CAMERA_VALUE 2
+
 WorkList::WorkList()
 {
 }
@@ -15,10 +18,8 @@ WorkList::~WorkList()
 
 void WorkList::openCamera()
 {
-	lCameraCapture = VideoCapture();
-	rCameraCapture = VideoCapture();
-	lCameraCapture.open(L_CAMERA_VALUE);
-	rCameraCapture.open(R_CAMERA_VALUE);
+	lCameraCapture = VideoCapture(L_CAMERA_VALUE);
+	rCameraCapture = VideoCapture(R_CAMERA_VALUE);
 
 	if (!lCameraCapture.isOpened())
 		return;
@@ -29,14 +30,15 @@ void WorkList::openCamera()
 	else
 		cout << "已打开右摄像头:" << R_CAMERA_VALUE << endl;
 
-	char c;
 	while (true) {
+
+
 		Mat frame;
 		lCameraCapture >> frame;
 		imshow(L_CAMERA_NAME, frame);
 		rCameraCapture >> frame;
 		imshow(R_CAMERA_NAME, frame);
-		c = waitKey(10);
+		char c = waitKey(10);
 		if (c == 27)
 			break;
 	}
