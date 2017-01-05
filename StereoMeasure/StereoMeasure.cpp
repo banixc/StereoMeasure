@@ -21,8 +21,8 @@ void on_mouse(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号
 }
 
 int main() {
-	VideoCapture lCamera(0);
-	VideoCapture RCamera(1);
+	VideoCapture lCamera(1);
+	VideoCapture RCamera(0);
 
 	if (!lCamera.isOpened()) { cout << "No left camera!" << endl; return -1; }
 	if (!RCamera.isOpened()) { cout << "No right camera!" << endl; return -1; }
@@ -157,18 +157,7 @@ int main() {
 			for (int j = 0; j < canvas.cols; j += 32)
 				line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
 
-		imshow("rectified", canvas);
-
-
-		cvtColor(lImg, lImg, CV_BGR2GRAY);
-		cvtColor(rImg, rImg, CV_BGR2GRAY);
-
-
-		//-- And create the image in which we will save our disparities
-		Mat imgDisparity16S = Mat(lImg.rows, lImg.cols, CV_16S);
-		Mat imgDisparity8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
-		Mat sgbmDisp16S = Mat(lImg.rows, lImg.cols, CV_16S);
-		Mat sgbmDisp8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
+		imshow("Rectified", canvas);
 
 		if (lImg.empty() || rImg.empty())
 		{
@@ -176,7 +165,16 @@ int main() {
 			return -1;
 		}
 
+
+		cvtColor(lImg, lImg, CV_BGR2GRAY);
+		cvtColor(rImg, rImg, CV_BGR2GRAY);
+
+
 		if (USE_BM) {
+
+			Mat imgDisparity16S = Mat(lImg.rows, lImg.cols, CV_16S);
+			Mat imgDisparity8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
+
 			sbm->compute(lImg, rImg, imgDisparity16S);
 
 			imgDisparity16S.convertTo(imgDisparity8U, CV_8UC1, 255.0 / 1000.0);
@@ -185,11 +183,15 @@ int main() {
 			Mat disparityShow;
 			imgDisparity8U.copyTo(disparityShow, Mask);
 			imshow("bmDisparity", disparityShow);
-			setMouseCallback("bmDisparity", on_mouse, 0);
+			//setMouseCallback("bmDisparity", on_mouse, 0);
 
 		}
 
 		if (USE_SGBM) {
+
+
+			Mat sgbmDisp16S = Mat(lImg.rows, lImg.cols, CV_16S);
+			Mat sgbmDisp8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
 			sgbm->compute(lImg, rImg, sgbmDisp16S);
 
 			sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
@@ -199,7 +201,7 @@ int main() {
 			sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
 
 			imshow("sgbmDisparity", sgbmDisparityShow);
-			setMouseCallback("sgbmDisparity", on_mouse, 0);
+			//setMouseCallback("sgbmDisparity", on_mouse, 0);
 		}
 		char c = waitKey(1);
 		if (c == 27)

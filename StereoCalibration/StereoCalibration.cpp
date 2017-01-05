@@ -5,6 +5,10 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 
+
+#define SHOW_BM false
+#define SHOW_SGBM true
+
 //在进行双目摄像头的标定之前，最好事先分别对两个摄像头进行单目视觉的标定 
 //分别确定两个摄像头的内参矩阵，然后再开始进行双目摄像头的标定
 //在此例程中是先对两个摄像头进行单独标定(见上一篇单目标定文章)，然后在进行立体标定
@@ -13,7 +17,7 @@
 using namespace std;
 using namespace cv;
 
-int imageWidth;								//摄像头的分辨率
+int imageWidth;											//摄像头的分辨率
 int imageHeight;
 const int boardWidth = 7;								//横向的角点数目
 const int boardHeight = 7;								//纵向的角点数据
@@ -21,10 +25,9 @@ const int boardCorner = boardWidth * boardHeight;		//总的角点数据
 const int frameNumber = 10;								//相机标定时需要采用的图像帧数
 const int squareSize = 20;								//标定板黑白格子的大小 单位mm
 const Size boardSize = Size(boardWidth, boardHeight);	//
-Size imageSize = Size(imageWidth, imageHeight);
+Size imageSize;
 
 int lid, rid;
-bool saved = false;
 
 Mat R, T, E, F;											//R 旋转矢量 T平移矢量 E本征矩阵 F基础矩阵
 vector<Mat> rvecs;									    //旋转向量
@@ -42,9 +45,36 @@ Mat rgbImageR, grayImageR;
 
 Mat Rl, Rr, Pl, Pr, Q;									//校正旋转矩阵R，投影矩阵P 重投影矩阵Q (下面有具体的含义解释）	
 Mat mapLx, mapLy, mapRx, mapRy;							//映射表
-Rect validROIL, validROIR;								//图像校正之后，会对图像进行裁剪，这里的validROI就是指裁剪之后的区域
+Rect validROIL, validROIR, validROI;					//图像校正之后，会对图像进行裁剪，这里的validROI就是指裁剪之后的区域
 Mat cameraMatrixL, distCoeffL, cameraMatrixR, distCoeffR;
+Mat Mask;
+VideoCapture lCapture, rCapture;						//左右摄像机源
 
+Ptr<StereoBM> sbm = StereoBM::create(16 * 5, 31);
+
+//    sbm->setMinDisparity(0);
+//    sbm->setNumDisparities(64);
+//    sbm->setTextureThreshold(10);
+//    sbm->setDisp12MaxDiff(-1);
+//    sbm->setPreFilterCap(31);
+//    sbm->setUniquenessRatio(25);
+//    sbm->setSpeckleRange(32);
+//    sbm->setSpeckleWindowSize(100);
+
+Ptr<StereoSGBM> sgbm = StereoSGBM::create(0, 64, 7,
+	10 * 7 * 7,
+	40 * 7 * 7,
+	1, 63, 10, 100, 32, StereoSGBM::MODE_SGBM);
+
+void initImageSize() {
+	imageSize = Size(imageWidth, imageHeight);
+}
+
+void error(const char* msg) {
+	destroyAllWindows();
+	cout << msg << endl;
+	system("pause");
+}
 
 // 从文件中获取相机标定参数
 bool loadCameraParams(void) {
@@ -104,6 +134,63 @@ bool loadCameraParams(void) {
 	return true;
 }
 
+/*从文件中加载双目标定参数*/
+bool loadStereoCalibrationParams(void) {
+
+	FileStorage fs;
+
+	fs.open("..\\CameraID.yml", FileStorage::READ);
+
+	if (!fs.isOpened())
+		return false;
+	fs["LID"] >> lid;
+	fs["RID"] >> rid;
+	
+	fs.open("..\\intrinsics.yml", FileStorage::READ);
+
+	if (!fs.isOpened())
+		return false;
+
+	fs["cameraMatrixL"] >> cameraMatrixL;
+	fs["cameraDistcoeffL"] >> distCoeffL;
+	fs["cameraMatrixR"] >> cameraMatrixR;
+	fs["cameraDistcoeffR"] >> distCoeffR;
+	fs.release();
+
+
+	//Mat R, T, E, F;
+	//Mat R1, R2, P1, P2, Q;
+	//Rect validRoi[2];
+	//Size imageSize(lCamera.get(CAP_PROP_FRAME_WIDTH), lCamera.get(CAP_PROP_FRAME_HEIGHT));
+
+	fs.open("..\\extrinsics.yml", FileStorage::READ);
+	if (!fs.isOpened())
+		return false;
+
+	fs["R"] >> R;
+	fs["T"] >> T;
+	fs["Rl"] >> Rl;
+	fs["Rr"] >> Rr;
+	fs["Pl"] >> Pl;
+	fs["Pr"] >> Pr;
+	fs["Q"] >> Q;
+	fs.release();
+
+
+	fs.open("..\\remap.yml", FileStorage::READ);
+	if (!fs.isOpened())
+		return false;
+
+	fs["mapLx"] >> mapLx;
+	fs["mapLy"] >> mapLy;
+	fs["mapRx"] >> mapRx;
+	fs["mapRy"] >> mapRy;
+	fs.release();
+
+	return true;
+
+}
+
 /*计算标定板上模块的实际物理坐标*/
 void calRealPoint(vector<vector<Point3f>>& obj, int boardwidth, int boardheight, int imgNumber, int squaresize)
 {
@@ -127,8 +214,15 @@ void outputCameraParam(void)
 {
 	
 	/*保存数据*/
-	/*输出数据*/
-	FileStorage fs("..\\intrinsics.yml", FileStorage::WRITE);
+	FileStorage fs;
+	
+	fs.open("..\\CameraID.yml", FileStorage::WRITE);
+	if (fs.isOpened()) {
+		fs << "LID" << lid << "RID" << rid;
+		fs.release();
+	}
+
+	fs.open("..\\intrinsics.yml", FileStorage::WRITE);
 	if (fs.isOpened())
 	{
 		fs << "cameraMatrixL" << cameraMatrixL << "cameraDistcoeffL" << distCoeffL << "cameraMatrixR" << cameraMatrixR << "cameraDistcoeffR" << distCoeffR;
@@ -149,16 +243,137 @@ void outputCameraParam(void)
 	}
 	else
 		cout << "Error: can not save the extrinsic parameters\n";
-	saved = true;
+
+	fs.open("..\\remap.yml", FileStorage::WRITE);
+	if (fs.isOpened())
+	{
+		fs << "mapLx" << mapLx << "mapLy" << mapLy << "mapRx" << mapRx << "mapRy" << mapRy;
+		fs.release();
+	}
+	else
+		cout << "Error: can not save the remap parameters\n";
 }
+
+void showBM(Mat& l, Mat& r) {
+
+
+	Mat imgDisparity16S = Mat(l.rows, l.cols, CV_16S);
+	Mat imgDisparity8U = Mat(l.rows, l.cols, CV_8UC1);
+
+	sbm->compute(l, r, imgDisparity16S);
+
+	imgDisparity16S.convertTo(imgDisparity8U, CV_8UC1, 255.0 / 1000.0);
+	compare(imgDisparity16S, 0, Mask, CMP_GE);
+	applyColorMap(imgDisparity8U, imgDisparity8U, COLORMAP_HSV);
+	Mat disparityShow;
+	imgDisparity8U.copyTo(disparityShow, Mask);
+	imshow("bmDisparity", disparityShow);
+	//setMouseCallback("bmDisparity", on_mouse, 0);
+
+}
+
+void showSGBM(Mat& l, Mat& r) {
+
+
+	Mat sgbmDisp16S = Mat(l.rows, l.cols, CV_16S);
+	Mat sgbmDisp8U = Mat(l.rows, l.cols, CV_8UC1);
+	sgbm->compute(l, r, sgbmDisp16S);
+
+	sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
+	compare(sgbmDisp16S, 0, Mask, CMP_GE);
+	applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
+	Mat sgbmDisparityShow;
+	sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
+
+	imshow("sgbmDisparity", sgbmDisparityShow);
+	//setMouseCallback("sgbmDisparity", on_mouse, 0);
+}
+
+
+void showRectifyImage(void) {
+
+	destroyAllWindows();
+
+	initImageSize();
+
+	Mat rectifyImageL, rectifyImageR;
+
+	while (true) {
+		lCapture >> rectifyImageL;
+		rCapture >> rectifyImageR;
+
+		remap(rectifyImageL, rectifyImageL, mapLx, mapLy, INTER_LINEAR);
+		remap(rectifyImageR, rectifyImageR, mapRx, mapRy, INTER_LINEAR);
+		
+		/*
+		把校正结果显示出来
+		把左右两幅图像显示到同一个画面上
+		这里只显示了最后一副图像的校正结果。并没有把所有的图像都显示出来
+		*/
+		Mat canvas;
+		double sf;
+		int w, h;
+		sf = 600. / MAX(imageSize.width, imageSize.height);
+		w = cvRound(imageSize.width * sf);
+		h = cvRound(imageSize.height * sf);
+		canvas.create(h, w * 2, CV_8UC3);
+
+		/*左图像画到画布上*/
+		Mat canvasPartL = canvas(Rect(w * 0, 0, w, h));								//得到画布的一部分
+		resize(rectifyImageL, canvasPartL, canvasPartL.size(), 0, 0, INTER_AREA);		//把图像缩放到跟canvasPart一样大小
+		Rect vroiL(cvRound(validROIL.x*sf), cvRound(validROIL.y*sf),				//获得被截取的区域	
+			cvRound(validROIL.width*sf), cvRound(validROIL.height*sf));
+		rectangle(canvasPartL, vroiL, Scalar(0, 0, 255), 3, 8);						//画上一个矩形
+
+																					//cout << "Painted ImageL" << endl;
+
+																					/*右图像画到画布上*/
+		Mat canvasPartR = canvas(Rect(w, 0, w, h));										//获得画布的另一部分
+		resize(rectifyImageR, canvasPartR, canvasPartR.size(), 0, 0, INTER_LINEAR);
+		Rect vroiR(cvRound(validROIR.x * sf), cvRound(validROIR.y*sf),
+			cvRound(validROIR.width * sf), cvRound(validROIR.height * sf));
+		rectangle(canvasPartR, vroiR, Scalar(0, 255, 0), 3, 8);
+
+		validROI = vroiL & vroiR;
+
+		Mat lImg = canvasPartL(validROI).clone();
+		Mat rImg = canvasPartR(validROI).clone();
+
+		/*画上对应的线条*/
+		for (int i = 0; i < canvas.rows; i += 16)
+			line(canvas, Point(0, i), Point(canvas.cols, i), Scalar(0, 255, 0), 1, 8);
+
+		imshow("Rectified", canvas);
+
+		cvtColor(lImg, lImg, CV_BGR2GRAY);
+		cvtColor(rImg, rImg, CV_BGR2GRAY);
+
+
+		if (SHOW_BM)
+			showBM(lImg, rImg);
+		if (SHOW_SGBM)
+			showSGBM(lImg, rImg);
+
+		char c = waitKey(1);
+		if (c == 27)
+			break;
+	}
+}
+
 
 
 int main()
 {
+	if (loadStereoCalibrationParams()) {
+		showRectifyImage();
+		return 0;
+	}
+
+
 	cout << "进行双目标定，请先确认已进行单目标定\n请输入左摄像头和右摄像头的ID：";
 	cin >> lid >> rid;
-	VideoCapture lCapture(lid);
-	VideoCapture rCapture(rid);
+	lCapture.open(lid);
+	rCapture.open(rid);
 
 	while (!lCapture.isOpened() || !rCapture.isOpened()) {
 		cout << "左摄像头打开：" << lCapture.isOpened() << " 右摄像头打开：" << rCapture.isOpened() << " 请重试：";
@@ -169,6 +384,7 @@ int main()
 
 	imageWidth = lCapture.get(CAP_PROP_FRAME_WIDTH);
 	imageHeight = lCapture.get(CAP_PROP_FRAME_HEIGHT);
+	initImageSize();
 
 	if (!loadCameraParams()) {
 		cout << "Load Params Fail, Please Check Files: Camera" << lid << ".yml And Camera" << rid << ".yml are exist!";
@@ -247,7 +463,7 @@ int main()
 	double rms = stereoCalibrate(objRealPoint, imagePointL, imagePointR,
 		cameraMatrixL, distCoeffL,
 		cameraMatrixR, distCoeffR,
-		Size(imageWidth, imageHeight), R, T, E, F,
+		imageSize, R, T, E, F,
 		CALIB_USE_INTRINSIC_GUESS,
 		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, 1e-5));
 
@@ -262,7 +478,12 @@ int main()
 	Q矩阵为重投影矩阵，即矩阵Q可以把2维平面(图像平面)上的点投影到3维空间的点:Q*[x y d 1] = [X Y Z W]。其中d为左右两幅图像的时差
 	*/
 	stereoRectify(cameraMatrixL, distCoeffL, cameraMatrixR, distCoeffR, imageSize, R, T, Rl, Rr, Pl, Pr, Q,
-		CALIB_ZERO_DISPARITY, -1, imageSize, &validROIL, &validROIR);
+		CALIB_ZERO_DISPARITY, 0, imageSize, &validROIL, &validROIR);
+
+	mapLx = Mat(imageSize, CV_32FC1);
+	mapLy = Mat(imageSize, CV_32FC1);
+	mapRx = Mat(imageSize, CV_32FC1);
+	mapRy = Mat(imageSize, CV_32FC1);
 	/*
 	根据stereoRectify 计算出来的R 和 P 来计算图像的映射表 mapx,mapy
 	mapx,mapy这两个映射表接下来可以给remap()函数调用，来校正图像，使得两幅图像共面并且行对准
@@ -271,61 +492,21 @@ int main()
 	*/
 	initUndistortRectifyMap(cameraMatrixL, distCoeffL, Rl, Pl, imageSize, CV_32FC1, mapLx, mapLy);
 	initUndistortRectifyMap(cameraMatrixR, distCoeffR, Rr, Pr, imageSize, CV_32FC1, mapRx, mapRy);
+	/*
+		if (mapLx.empty() || mapLy.empty()) {
+		error("Error! L RectifyMap is empty!");
+		return -1;
+	} 
+
+	if (mapRx.empty() || mapRy.empty()) {
+		error("Error! R RectifyMap is empty!");
+		return -1;
+	}*/
 
 	/*保存并输出数据*/
 	outputCameraParam();
 	
-	destroyAllWindows();
-
-	Mat rectifyImageL, rectifyImageR;
-
-	while (true) {
-		lCapture >> rectifyImageL;
-		rCapture >> rectifyImageR;
-
-		remap(rectifyImageL, rectifyImageL, mapLx, mapLy, INTER_LINEAR);
-		remap(rectifyImageR, rectifyImageR, mapRx, mapRy, INTER_LINEAR);
-
-		/*
-		把校正结果显示出来
-		把左右两幅图像显示到同一个画面上
-		这里只显示了最后一副图像的校正结果。并没有把所有的图像都显示出来
-		*/
-		Mat canvas;
-		double sf;
-		int w, h;
-		sf = 600. / MAX(imageSize.width, imageSize.height);
-		w = cvRound(imageSize.width * sf);
-		h = cvRound(imageSize.height * sf);
-		canvas.create(h, w * 2, CV_8UC3);
-
-		/*左图像画到画布上*/
-		Mat canvasPart = canvas(Rect(w * 0, 0, w, h));								//得到画布的一部分
-		resize(rectifyImageL, canvasPart, canvasPart.size(), 0, 0, INTER_AREA);		//把图像缩放到跟canvasPart一样大小
-		Rect vroiL(cvRound(validROIL.x*sf), cvRound(validROIL.y*sf),				//获得被截取的区域	
-			cvRound(validROIL.width*sf), cvRound(validROIL.height*sf));
-		rectangle(canvasPart, vroiL, Scalar(0, 0, 255), 3, 8);						//画上一个矩形
-
-		//cout << "Painted ImageL" << endl;
-
-																					/*右图像画到画布上*/
-		canvasPart = canvas(Rect(w, 0, w, h));										//获得画布的另一部分
-		resize(rectifyImageR, canvasPart, canvasPart.size(), 0, 0, INTER_LINEAR);
-		Rect vroiR(cvRound(validROIR.x * sf), cvRound(validROIR.y*sf),
-			cvRound(validROIR.width * sf), cvRound(validROIR.height * sf));
-		rectangle(canvasPart, vroiR, Scalar(0, 255, 0), 3, 8);
-
-		//cout << "Painted ImageR" << endl;
-
-		/*画上对应的线条*/
-		for (int i = 0; i < canvas.rows; i += 16)
-			line(canvas, Point(0, i), Point(canvas.cols, i), Scalar(0, 255, 0), 1, 8);
-
-		imshow("Rectified", canvas);
-		char c = waitKey(1);
-		if (c == 27)
-			break;
-	}
+	showRectifyImage();
 
 	//cvtColor(grayImageL, rectifyImageL, CV_GRAY2BGR);
 	//cvtColor(grayImageR, rectifyImageR, CV_GRAY2BGR);
@@ -344,3 +525,4 @@ int main()
 
 	return 0;
 }
+
