@@ -1,52 +1,52 @@
-// StereoCalibration.cpp : å®šä¹‰æ§åˆ¶å°åº”ç”¨ç¨‹åºçš„å…¥å£ç‚¹ã€‚
+// StereoCalibration.cpp : ¶¨Òå¿ØÖÆÌ¨Ó¦ÓÃ³ÌĞòµÄÈë¿Úµã¡£
 //
 
 #include "stdafx.h"
 #include <opencv2/opencv.hpp>
 #include <iostream>
 
-//åœ¨è¿›è¡ŒåŒç›®æ‘„åƒå¤´çš„æ ‡å®šä¹‹å‰ï¼Œæœ€å¥½äº‹å…ˆåˆ†åˆ«å¯¹ä¸¤ä¸ªæ‘„åƒå¤´è¿›è¡Œå•ç›®è§†è§‰çš„æ ‡å®š 
-//åˆ†åˆ«ç¡®å®šä¸¤ä¸ªæ‘„åƒå¤´çš„å†…å‚çŸ©é˜µï¼Œç„¶åå†å¼€å§‹è¿›è¡ŒåŒç›®æ‘„åƒå¤´çš„æ ‡å®š
-//åœ¨æ­¤ä¾‹ç¨‹ä¸­æ˜¯å…ˆå¯¹ä¸¤ä¸ªæ‘„åƒå¤´è¿›è¡Œå•ç‹¬æ ‡å®š(è§ä¸Šä¸€ç¯‡å•ç›®æ ‡å®šæ–‡ç« )ï¼Œç„¶ååœ¨è¿›è¡Œç«‹ä½“æ ‡å®š
+//ÔÚ½øĞĞË«Ä¿ÉãÏñÍ·µÄ±ê¶¨Ö®Ç°£¬×îºÃÊÂÏÈ·Ö±ğ¶ÔÁ½¸öÉãÏñÍ·½øĞĞµ¥Ä¿ÊÓ¾õµÄ±ê¶¨ 
+//·Ö±ğÈ·¶¨Á½¸öÉãÏñÍ·µÄÄÚ²Î¾ØÕó£¬È»ºóÔÙ¿ªÊ¼½øĞĞË«Ä¿ÉãÏñÍ·µÄ±ê¶¨
+//ÔÚ´ËÀı³ÌÖĞÊÇÏÈ¶ÔÁ½¸öÉãÏñÍ·½øĞĞµ¥¶À±ê¶¨(¼ûÉÏÒ»Æªµ¥Ä¿±ê¶¨ÎÄÕÂ)£¬È»ºóÔÚ½øĞĞÁ¢Ìå±ê¶¨
 
 
 using namespace std;
 using namespace cv;
 
-const int imageWidth = 640;								//æ‘„åƒå¤´çš„åˆ†è¾¨ç‡
+const int imageWidth = 640;								//ÉãÏñÍ·µÄ·Ö±æÂÊ
 const int imageHeight = 480;
-const int boardWidth = 7;								//æ¨ªå‘çš„è§’ç‚¹æ•°ç›®
-const int boardHeight = 7;								//çºµå‘çš„è§’ç‚¹æ•°æ®
-const int boardCorner = boardWidth * boardHeight;		//æ€»çš„è§’ç‚¹æ•°æ®
-const int frameNumber = 10;								//ç›¸æœºæ ‡å®šæ—¶éœ€è¦é‡‡ç”¨çš„å›¾åƒå¸§æ•°
-const int squareSize = 20;								//æ ‡å®šæ¿é»‘ç™½æ ¼å­çš„å¤§å° å•ä½mm
+const int boardWidth = 7;								//ºáÏòµÄ½ÇµãÊıÄ¿
+const int boardHeight = 7;								//×İÏòµÄ½ÇµãÊı¾İ
+const int boardCorner = boardWidth * boardHeight;		//×ÜµÄ½ÇµãÊı¾İ
+const int frameNumber = 10;								//Ïà»ú±ê¶¨Ê±ĞèÒª²ÉÓÃµÄÍ¼ÏñÖ¡Êı
+const int squareSize = 20;								//±ê¶¨°åºÚ°×¸ñ×ÓµÄ´óĞ¡ µ¥Î»mm
 const Size boardSize = Size(boardWidth, boardHeight);	//
 Size imageSize = Size(imageWidth, imageHeight);
 
 int lid, rid;
 bool saved = false;
 
-Mat R, T, E, F;											//R æ—‹è½¬çŸ¢é‡ Tå¹³ç§»çŸ¢é‡ Eæœ¬å¾çŸ©é˜µ FåŸºç¡€çŸ©é˜µ
-vector<Mat> rvecs;									    //æ—‹è½¬å‘é‡
-vector<Mat> tvecs;										//å¹³ç§»å‘é‡
-vector<vector<Point2f>> imagePointL;				    //å·¦è¾¹æ‘„åƒæœºæ‰€æœ‰ç…§ç‰‡è§’ç‚¹çš„åæ ‡é›†åˆ
-vector<vector<Point2f>> imagePointR;					//å³è¾¹æ‘„åƒæœºæ‰€æœ‰ç…§ç‰‡è§’ç‚¹çš„åæ ‡é›†åˆ
-vector<vector<Point3f>> objRealPoint;					//å„å‰¯å›¾åƒçš„è§’ç‚¹çš„å®é™…ç‰©ç†åæ ‡é›†åˆ
+Mat R, T, E, F;											//R Ğı×ªÊ¸Á¿ TÆ½ÒÆÊ¸Á¿ E±¾Õ÷¾ØÕó F»ù´¡¾ØÕó
+vector<Mat> rvecs;									    //Ğı×ªÏòÁ¿
+vector<Mat> tvecs;										//Æ½ÒÆÏòÁ¿
+vector<vector<Point2f>> imagePointL;				    //×ó±ßÉãÏñ»úËùÓĞÕÕÆ¬½ÇµãµÄ×ø±ê¼¯ºÏ
+vector<vector<Point2f>> imagePointR;					//ÓÒ±ßÉãÏñ»úËùÓĞÕÕÆ¬½ÇµãµÄ×ø±ê¼¯ºÏ
+vector<vector<Point3f>> objRealPoint;					//¸÷¸±Í¼ÏñµÄ½ÇµãµÄÊµ¼ÊÎïÀí×ø±ê¼¯ºÏ
 
 
-vector<Point2f> cornerL;								//å·¦è¾¹æ‘„åƒæœºæŸä¸€ç…§ç‰‡è§’ç‚¹åæ ‡é›†åˆ
-vector<Point2f> cornerR;								//å³è¾¹æ‘„åƒæœºæŸä¸€ç…§ç‰‡è§’ç‚¹åæ ‡é›†åˆ
+vector<Point2f> cornerL;								//×ó±ßÉãÏñ»úÄ³Ò»ÕÕÆ¬½Çµã×ø±ê¼¯ºÏ
+vector<Point2f> cornerR;								//ÓÒ±ßÉãÏñ»úÄ³Ò»ÕÕÆ¬½Çµã×ø±ê¼¯ºÏ
 
 Mat rgbImageL, grayImageL;
 Mat rgbImageR, grayImageR;
 
-Mat Rl, Rr, Pl, Pr, Q;									//æ ¡æ­£æ—‹è½¬çŸ©é˜µRï¼ŒæŠ•å½±çŸ©é˜µP é‡æŠ•å½±çŸ©é˜µQ (ä¸‹é¢æœ‰å…·ä½“çš„å«ä¹‰è§£é‡Šï¼‰	
-Mat mapLx, mapLy, mapRx, mapRy;							//æ˜ å°„è¡¨
-Rect validROIL, validROIR;								//å›¾åƒæ ¡æ­£ä¹‹åï¼Œä¼šå¯¹å›¾åƒè¿›è¡Œè£å‰ªï¼Œè¿™é‡Œçš„validROIå°±æ˜¯æŒ‡è£å‰ªä¹‹åçš„åŒºåŸŸ
+Mat Rl, Rr, Pl, Pr, Q;									//Ğ£ÕıĞı×ª¾ØÕóR£¬Í¶Ó°¾ØÕóP ÖØÍ¶Ó°¾ØÕóQ (ÏÂÃæÓĞ¾ßÌåµÄº¬Òå½âÊÍ£©	
+Mat mapLx, mapLy, mapRx, mapRy;							//Ó³Éä±í
+Rect validROIL, validROIR;								//Í¼ÏñĞ£ÕıÖ®ºó£¬»á¶ÔÍ¼Ïñ½øĞĞ²Ã¼ô£¬ÕâÀïµÄvalidROI¾ÍÊÇÖ¸²Ã¼ôÖ®ºóµÄÇøÓò
 Mat cameraMatrixL, distCoeffL, cameraMatrixR, distCoeffR;
 
 
-// ä»æ–‡ä»¶ä¸­è·å–ç›¸æœºæ ‡å®šå‚æ•°
+// ´ÓÎÄ¼şÖĞ»ñÈ¡Ïà»ú±ê¶¨²ÎÊı
 bool loadCameraParams(void) {
 
 	char filename[64];
@@ -70,7 +70,7 @@ bool loadCameraParams(void) {
 	fs["p3"] >> p3;
 
 	/*
-	äº‹å…ˆæ ‡å®šå¥½çš„ç›¸æœºçš„å†…å‚çŸ©é˜µ
+	ÊÂÏÈ±ê¶¨ºÃµÄÏà»úµÄÄÚ²Î¾ØÕó
 	fx 0 cx
 	0 fy cy
 	0 0  1
@@ -104,7 +104,7 @@ bool loadCameraParams(void) {
 	return true;
 }
 
-/*è®¡ç®—æ ‡å®šæ¿ä¸Šæ¨¡å—çš„å®é™…ç‰©ç†åæ ‡*/
+/*¼ÆËã±ê¶¨°åÉÏÄ£¿éµÄÊµ¼ÊÎïÀí×ø±ê*/
 void calRealPoint(vector<vector<Point3f>>& obj, int boardwidth, int boardheight, int imgNumber, int squaresize)
 {
 	//	Mat imgpoint(boardheight, boardwidth, CV_32FC3,Scalar(0,0,0));
@@ -126,8 +126,8 @@ void calRealPoint(vector<vector<Point3f>>& obj, int boardwidth, int boardheight,
 void outputCameraParam(void)
 {
 	
-	/*ä¿å­˜æ•°æ®*/
-	/*è¾“å‡ºæ•°æ®*/
+	/*±£´æÊı¾İ*/
+	/*Êä³öÊı¾İ*/
 	FileStorage fs("..\\intrinsics.yml", FileStorage::WRITE);
 	if (fs.isOpened())
 	{
@@ -155,13 +155,13 @@ void outputCameraParam(void)
 
 int main()
 {
-	cout << "è¿›è¡ŒåŒç›®æ ‡å®šï¼Œè¯·å…ˆç¡®è®¤å·²è¿›è¡Œå•ç›®æ ‡å®š\nè¯·è¾“å…¥å·¦æ‘„åƒå¤´å’Œå³æ‘„åƒå¤´çš„IDï¼š";
+	cout << "½øĞĞË«Ä¿±ê¶¨£¬ÇëÏÈÈ·ÈÏÒÑ½øĞĞµ¥Ä¿±ê¶¨\nÇëÊäÈë×óÉãÏñÍ·ºÍÓÒÉãÏñÍ·µÄID£º";
 	cin >> lid >> rid;
 	VideoCapture lCapture(lid);
 	VideoCapture rCapture(rid);
 
 	while (!lCapture.isOpened() || !rCapture.isOpened()) {
-		cout << "å·¦æ‘„åƒå¤´æ‰“å¼€ï¼š" << lCapture.isOpened() << " å³æ‘„åƒå¤´æ‰“å¼€ï¼š" << rCapture.isOpened() << " è¯·é‡è¯•ï¼š";
+		cout << "×óÉãÏñÍ·´ò¿ª£º" << lCapture.isOpened() << " ÓÒÉãÏñÍ·´ò¿ª£º" << rCapture.isOpened() << " ÇëÖØÊÔ£º";
 		cin >> lid >> rid;
 		lCapture.open(lid);
 		rCapture.open(rid);
@@ -171,7 +171,7 @@ int main()
 		cout << "Load Params Fail, Please Check Files: Camera" << lid << ".yml And Camera" << rid << ".yml are exist!";
 	}
 
-	cout << "æŒ‰ä¸‹ c æ¥æŠ“å–ä¸€å¼ å›¾ç‰‡\næŒ‰ä¸‹ ESC é€€å‡ºç¨‹åº" << endl;
+	cout << "°´ÏÂ c À´×¥È¡Ò»ÕÅÍ¼Æ¬\n°´ÏÂ ESC ÍË³ö³ÌĞò" << endl;
 
 	int goodFrameCount = 0;
 	while (goodFrameCount < frameNumber) {
@@ -185,20 +185,20 @@ int main()
 
 		char c = waitKey(10);
 
-		if (c == 27) //é€€å‡º
+		if (c == 27) //ÍË³ö
 			return 0;
-		else if (c == 'c') {//æ‹ç…§å¹¶æ£€æµ‹
+		else if (c == 'c') {//ÅÄÕÕ²¢¼ì²â
 
 			bool isFindL, isFindR;
 
 			isFindL = findChessboardCorners(rgbImageL, boardSize, cornerL);
 			isFindR = findChessboardCorners(rgbImageR, boardSize, cornerR);
-			if (isFindL && isFindR )	 //å¦‚æœä¸¤å¹…å›¾åƒéƒ½æ‰¾åˆ°äº†æ‰€æœ‰çš„è§’ç‚¹ åˆ™è¯´æ˜è¿™ä¸¤å¹…å›¾åƒæ˜¯å¯è¡Œçš„
+			if (isFindL && isFindR )	 //Èç¹ûÁ½·ùÍ¼Ïñ¶¼ÕÒµ½ÁËËùÓĞµÄ½Çµã ÔòËµÃ÷ÕâÁ½·ùÍ¼ÏñÊÇ¿ÉĞĞµÄ
 			{
 				/*
-				Size(5,5) æœç´¢çª—å£çš„ä¸€åŠå¤§å°
-				Size(-1,-1) æ­»åŒºçš„ä¸€åŠå°ºå¯¸
-				TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1)è¿­ä»£ç»ˆæ­¢æ¡ä»¶
+				Size(5,5) ËÑË÷´°¿ÚµÄÒ»°ë´óĞ¡
+				Size(-1,-1) ËÀÇøµÄÒ»°ë³ß´ç
+				TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1)µü´úÖÕÖ¹Ìõ¼ş
 				*/
 				cornerSubPix(grayImageL, cornerL, Size(5, 5), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1));
 				drawChessboardCorners(rgbImageL, boardSize, cornerL, isFindL);
@@ -212,9 +212,9 @@ int main()
 				imagePointR.push_back(cornerR);
 
 				/*
-				æœ¬æ¥åº”è¯¥åˆ¤æ–­è¿™ä¸¤å¹…å›¾åƒæ˜¯ä¸æ˜¯å¥½çš„ï¼Œå¦‚æœå¯ä»¥åŒ¹é…çš„è¯æ‰å¯ä»¥ç”¨æ¥æ ‡å®š
-				ä½†æ˜¯åœ¨è¿™ä¸ªä¾‹ç¨‹å½“ä¸­ï¼Œç”¨çš„å›¾åƒæ˜¯ç³»ç»Ÿè‡ªå¸¦çš„å›¾åƒï¼Œéƒ½æ˜¯å¯ä»¥åŒ¹é…æˆåŠŸçš„ã€‚
-				æ‰€ä»¥è¿™é‡Œå°±æ²¡æœ‰åˆ¤æ–­
+				±¾À´Ó¦¸ÃÅĞ¶ÏÕâÁ½·ùÍ¼ÏñÊÇ²»ÊÇºÃµÄ£¬Èç¹û¿ÉÒÔÆ¥ÅäµÄ»°²Å¿ÉÒÔÓÃÀ´±ê¶¨
+				µ«ÊÇÔÚÕâ¸öÀı³Ìµ±ÖĞ£¬ÓÃµÄÍ¼ÏñÊÇÏµÍ³×Ô´øµÄÍ¼Ïñ£¬¶¼ÊÇ¿ÉÒÔÆ¥Åä³É¹¦µÄ¡£
+				ËùÒÔÕâÀï¾ÍÃ»ÓĞÅĞ¶Ï
 				*/
 				goodFrameCount++;
 
@@ -230,16 +230,16 @@ int main()
 	}
 
 	/*
-	è®¡ç®—å®é™…çš„æ ¡æ­£ç‚¹çš„ä¸‰ç»´åæ ‡
-	æ ¹æ®å®é™…æ ‡å®šæ ¼å­çš„å¤§å°æ¥è®¾ç½®
+	¼ÆËãÊµ¼ÊµÄĞ£ÕıµãµÄÈıÎ¬×ø±ê
+	¸ù¾İÊµ¼Ê±ê¶¨¸ñ×ÓµÄ´óĞ¡À´ÉèÖÃ
 	*/
 	calRealPoint(objRealPoint, boardWidth, boardHeight, frameNumber, squareSize);
 	cout << "cal real successful" << endl;
 
 	/*
-	æ ‡å®šæ‘„åƒå¤´
-	ç”±äºå·¦å³æ‘„åƒæœºåˆ†åˆ«éƒ½ç»è¿‡äº†å•ç›®æ ‡å®š
-	æ‰€ä»¥åœ¨æ­¤å¤„é€‰æ‹©flag = CALIB_USE_INTRINSIC_GUESS
+	±ê¶¨ÉãÏñÍ·
+	ÓÉÓÚ×óÓÒÉãÏñ»ú·Ö±ğ¶¼¾­¹ıÁËµ¥Ä¿±ê¶¨
+	ËùÒÔÔÚ´Ë´¦Ñ¡Ôñflag = CALIB_USE_INTRINSIC_GUESS
 	*/
 	double rms = stereoCalibrate(objRealPoint, imagePointL, imagePointR,
 		cameraMatrixL, distCoeffL,
@@ -251,25 +251,25 @@ int main()
 	cout << "Stereo Calibration done with RMS error = " << rms << endl;
 
 	/*
-	ç«‹ä½“æ ¡æ­£çš„æ—¶å€™éœ€è¦ä¸¤å¹…å›¾åƒå…±é¢å¹¶ä¸”è¡Œå¯¹å‡† ä»¥ä½¿å¾—ç«‹ä½“åŒ¹é…æ›´åŠ çš„å¯é 
-	ä½¿å¾—ä¸¤å¹…å›¾åƒå…±é¢çš„æ–¹æ³•å°±æ˜¯æŠŠä¸¤ä¸ªæ‘„åƒå¤´çš„å›¾åƒæŠ•å½±åˆ°ä¸€ä¸ªå…¬å…±æˆåƒé¢ä¸Šï¼Œè¿™æ ·æ¯å¹…å›¾åƒä»æœ¬å›¾åƒå¹³é¢æŠ•å½±åˆ°å…¬å…±å›¾åƒå¹³é¢éƒ½éœ€è¦ä¸€ä¸ªæ—‹è½¬çŸ©é˜µR
-	stereoRectify è¿™ä¸ªå‡½æ•°è®¡ç®—çš„å°±æ˜¯ä»å›¾åƒå¹³é¢æŠ•å½±éƒ½å…¬å…±æˆåƒå¹³é¢çš„æ—‹è½¬çŸ©é˜µRl,Rrã€‚ Rl,Rrå³ä¸ºå·¦å³ç›¸æœºå¹³é¢è¡Œå¯¹å‡†çš„æ ¡æ­£æ—‹è½¬çŸ©é˜µã€‚
-	å·¦ç›¸æœºç»è¿‡Rlæ—‹è½¬ï¼Œå³ç›¸æœºç»è¿‡Rræ—‹è½¬ä¹‹åï¼Œä¸¤å¹…å›¾åƒå°±å·²ç»å…±é¢å¹¶ä¸”è¡Œå¯¹å‡†äº†ã€‚
-	å…¶ä¸­Pl,Prä¸ºä¸¤ä¸ªç›¸æœºçš„æŠ•å½±çŸ©é˜µï¼Œå…¶ä½œç”¨æ˜¯å°†3Dç‚¹çš„åæ ‡è½¬æ¢åˆ°å›¾åƒçš„2Dç‚¹çš„åæ ‡:P*[X Y Z 1]' =[x y w]
-	QçŸ©é˜µä¸ºé‡æŠ•å½±çŸ©é˜µï¼Œå³çŸ©é˜µQå¯ä»¥æŠŠ2ç»´å¹³é¢(å›¾åƒå¹³é¢)ä¸Šçš„ç‚¹æŠ•å½±åˆ°3ç»´ç©ºé—´çš„ç‚¹:Q*[x y d 1] = [X Y Z W]ã€‚å…¶ä¸­dä¸ºå·¦å³ä¸¤å¹…å›¾åƒçš„æ—¶å·®
+	Á¢ÌåĞ£ÕıµÄÊ±ºòĞèÒªÁ½·ùÍ¼Ïñ¹²Ãæ²¢ÇÒĞĞ¶Ô×¼ ÒÔÊ¹µÃÁ¢ÌåÆ¥Åä¸ü¼ÓµÄ¿É¿¿
+	Ê¹µÃÁ½·ùÍ¼Ïñ¹²ÃæµÄ·½·¨¾ÍÊÇ°ÑÁ½¸öÉãÏñÍ·µÄÍ¼ÏñÍ¶Ó°µ½Ò»¸ö¹«¹²³ÉÏñÃæÉÏ£¬ÕâÑùÃ¿·ùÍ¼Ïñ´Ó±¾Í¼ÏñÆ½ÃæÍ¶Ó°µ½¹«¹²Í¼ÏñÆ½Ãæ¶¼ĞèÒªÒ»¸öĞı×ª¾ØÕóR
+	stereoRectify Õâ¸öº¯Êı¼ÆËãµÄ¾ÍÊÇ´ÓÍ¼ÏñÆ½ÃæÍ¶Ó°¶¼¹«¹²³ÉÏñÆ½ÃæµÄĞı×ª¾ØÕóRl,Rr¡£ Rl,Rr¼´Îª×óÓÒÏà»úÆ½ÃæĞĞ¶Ô×¼µÄĞ£ÕıĞı×ª¾ØÕó¡£
+	×óÏà»ú¾­¹ıRlĞı×ª£¬ÓÒÏà»ú¾­¹ıRrĞı×ªÖ®ºó£¬Á½·ùÍ¼Ïñ¾ÍÒÑ¾­¹²Ãæ²¢ÇÒĞĞ¶Ô×¼ÁË¡£
+	ÆäÖĞPl,PrÎªÁ½¸öÏà»úµÄÍ¶Ó°¾ØÕó£¬Æä×÷ÓÃÊÇ½«3DµãµÄ×ø±ê×ª»»µ½Í¼ÏñµÄ2DµãµÄ×ø±ê:P*[X Y Z 1]' =[x y w]
+	Q¾ØÕóÎªÖØÍ¶Ó°¾ØÕó£¬¼´¾ØÕóQ¿ÉÒÔ°Ñ2Î¬Æ½Ãæ(Í¼ÏñÆ½Ãæ)ÉÏµÄµãÍ¶Ó°µ½3Î¬¿Õ¼äµÄµã:Q*[x y d 1] = [X Y Z W]¡£ÆäÖĞdÎª×óÓÒÁ½·ùÍ¼ÏñµÄÊ±²î
 	*/
 	stereoRectify(cameraMatrixL, distCoeffL, cameraMatrixR, distCoeffR, imageSize, R, T, Rl, Rr, Pl, Pr, Q,
 		CALIB_ZERO_DISPARITY, -1, imageSize, &validROIL, &validROIR);
 	/*
-	æ ¹æ®stereoRectify è®¡ç®—å‡ºæ¥çš„R å’Œ P æ¥è®¡ç®—å›¾åƒçš„æ˜ å°„è¡¨ mapx,mapy
-	mapx,mapyè¿™ä¸¤ä¸ªæ˜ å°„è¡¨æ¥ä¸‹æ¥å¯ä»¥ç»™remap()å‡½æ•°è°ƒç”¨ï¼Œæ¥æ ¡æ­£å›¾åƒï¼Œä½¿å¾—ä¸¤å¹…å›¾åƒå…±é¢å¹¶ä¸”è¡Œå¯¹å‡†
-	ininUndistortRectifyMap()çš„å‚æ•°newCameraMatrixå°±æ˜¯æ ¡æ­£åçš„æ‘„åƒæœºçŸ©é˜µã€‚åœ¨openCVé‡Œé¢ï¼Œæ ¡æ­£åçš„è®¡ç®—æœºçŸ©é˜µMrectæ˜¯è·ŸæŠ•å½±çŸ©é˜µPä¸€èµ·è¿”å›çš„ã€‚
-	æ‰€ä»¥æˆ‘ä»¬åœ¨è¿™é‡Œä¼ å…¥æŠ•å½±çŸ©é˜µPï¼Œæ­¤å‡½æ•°å¯ä»¥ä»æŠ•å½±çŸ©é˜µPä¸­è¯»å‡ºæ ¡æ­£åçš„æ‘„åƒæœºçŸ©é˜µ
+	¸ù¾İstereoRectify ¼ÆËã³öÀ´µÄR ºÍ P À´¼ÆËãÍ¼ÏñµÄÓ³Éä±í mapx,mapy
+	mapx,mapyÕâÁ½¸öÓ³Éä±í½ÓÏÂÀ´¿ÉÒÔ¸øremap()º¯Êıµ÷ÓÃ£¬À´Ğ£ÕıÍ¼Ïñ£¬Ê¹µÃÁ½·ùÍ¼Ïñ¹²Ãæ²¢ÇÒĞĞ¶Ô×¼
+	ininUndistortRectifyMap()µÄ²ÎÊınewCameraMatrix¾ÍÊÇĞ£ÕıºóµÄÉãÏñ»ú¾ØÕó¡£ÔÚopenCVÀïÃæ£¬Ğ£ÕıºóµÄ¼ÆËã»ú¾ØÕóMrectÊÇ¸úÍ¶Ó°¾ØÕóPÒ»Æğ·µ»ØµÄ¡£
+	ËùÒÔÎÒÃÇÔÚÕâÀï´«ÈëÍ¶Ó°¾ØÕóP£¬´Ëº¯Êı¿ÉÒÔ´ÓÍ¶Ó°¾ØÕóPÖĞ¶Á³öĞ£ÕıºóµÄÉãÏñ»ú¾ØÕó
 	*/
-	initUndistortRectifyMap(cameraMatrixL, distCoeffL, Rl, Pl, imageSize, CV_32FC1, mapLx, mapLy);
+	initUndistortRectifyMap(cameraMatrixL, distCoeffL, Rl, Pr, imageSize, CV_32FC1, mapLx, mapLy);
 	initUndistortRectifyMap(cameraMatrixR, distCoeffR, Rr, Pr, imageSize, CV_32FC1, mapRx, mapRy);
 
-	/*ä¿å­˜å¹¶è¾“å‡ºæ•°æ®*/
+	/*±£´æ²¢Êä³öÊı¾İ*/
 	outputCameraParam();
 
 
@@ -288,9 +288,9 @@ int main()
 		remap(rectifyImageR, rectifyImageR, mapRx, mapRy, INTER_LINEAR);
 
 		/*
-		æŠŠæ ¡æ­£ç»“æœæ˜¾ç¤ºå‡ºæ¥
-		æŠŠå·¦å³ä¸¤å¹…å›¾åƒæ˜¾ç¤ºåˆ°åŒä¸€ä¸ªç”»é¢ä¸Š
-		è¿™é‡Œåªæ˜¾ç¤ºäº†æœ€åä¸€å‰¯å›¾åƒçš„æ ¡æ­£ç»“æœã€‚å¹¶æ²¡æœ‰æŠŠæ‰€æœ‰çš„å›¾åƒéƒ½æ˜¾ç¤ºå‡ºæ¥
+		°ÑĞ£Õı½á¹ûÏÔÊ¾³öÀ´
+		°Ñ×óÓÒÁ½·ùÍ¼ÏñÏÔÊ¾µ½Í¬Ò»¸ö»­ÃæÉÏ
+		ÕâÀïÖ»ÏÔÊ¾ÁË×îºóÒ»¸±Í¼ÏñµÄĞ£Õı½á¹û¡£²¢Ã»ÓĞ°ÑËùÓĞµÄÍ¼Ïñ¶¼ÏÔÊ¾³öÀ´
 		*/
 		Mat canvas;
 		double sf;
@@ -300,17 +300,17 @@ int main()
 		h = cvRound(imageSize.height * sf);
 		canvas.create(h, w * 2, CV_8UC3);
 
-		/*å·¦å›¾åƒç”»åˆ°ç”»å¸ƒä¸Š*/
-		Mat canvasPart = canvas(Rect(w * 0, 0, w, h));								//å¾—åˆ°ç”»å¸ƒçš„ä¸€éƒ¨åˆ†
-		resize(rectifyImageL, canvasPart, canvasPart.size(), 0, 0, INTER_AREA);		//æŠŠå›¾åƒç¼©æ”¾åˆ°è·ŸcanvasPartä¸€æ ·å¤§å°
-		Rect vroiL(cvRound(validROIL.x*sf), cvRound(validROIL.y*sf),				//è·å¾—è¢«æˆªå–çš„åŒºåŸŸ	
+		/*×óÍ¼Ïñ»­µ½»­²¼ÉÏ*/
+		Mat canvasPart = canvas(Rect(w * 0, 0, w, h));								//µÃµ½»­²¼µÄÒ»²¿·Ö
+		resize(rectifyImageL, canvasPart, canvasPart.size(), 0, 0, INTER_AREA);		//°ÑÍ¼ÏñËõ·Åµ½¸úcanvasPartÒ»Ñù´óĞ¡
+		Rect vroiL(cvRound(validROIL.x*sf), cvRound(validROIL.y*sf),				//»ñµÃ±»½ØÈ¡µÄÇøÓò	
 			cvRound(validROIL.width*sf), cvRound(validROIL.height*sf));
-		rectangle(canvasPart, vroiL, Scalar(0, 0, 255), 3, 8);						//ç”»ä¸Šä¸€ä¸ªçŸ©å½¢
+		rectangle(canvasPart, vroiL, Scalar(0, 0, 255), 3, 8);						//»­ÉÏÒ»¸ö¾ØĞÎ
 
 		//cout << "Painted ImageL" << endl;
 
-																					/*å³å›¾åƒç”»åˆ°ç”»å¸ƒä¸Š*/
-		canvasPart = canvas(Rect(w, 0, w, h));										//è·å¾—ç”»å¸ƒçš„å¦ä¸€éƒ¨åˆ†
+																					/*ÓÒÍ¼Ïñ»­µ½»­²¼ÉÏ*/
+		canvasPart = canvas(Rect(w, 0, w, h));										//»ñµÃ»­²¼µÄÁíÒ»²¿·Ö
 		resize(rectifyImageR, canvasPart, canvasPart.size(), 0, 0, INTER_LINEAR);
 		Rect vroiR(cvRound(validROIR.x * sf), cvRound(validROIR.y*sf),
 			cvRound(validROIR.width * sf), cvRound(validROIR.height * sf));
@@ -318,7 +318,7 @@ int main()
 
 		//cout << "Painted ImageR" << endl;
 
-		/*ç”»ä¸Šå¯¹åº”çš„çº¿æ¡*/
+		/*»­ÉÏ¶ÔÓ¦µÄÏßÌõ*/
 		for (int i = 0; i < canvas.rows; i += 16)
 			line(canvas, Point(0, i), Point(canvas.cols, i), Scalar(0, 255, 0), 1, 8);
 
@@ -334,7 +334,7 @@ int main()
 	//imshow("Before Rectify L", rectifyImageL);
 	//imshow("Before Rectify R", rectifyImageR);
 	/*
-	ç»è¿‡remapä¹‹åï¼Œå·¦å³ç›¸æœºçš„å›¾åƒå·²ç»å…±é¢å¹¶ä¸”è¡Œå¯¹å‡†äº†
+	¾­¹ıremapÖ®ºó£¬×óÓÒÏà»úµÄÍ¼ÏñÒÑ¾­¹²Ãæ²¢ÇÒĞĞ¶Ô×¼ÁË
 	*/
 
 
