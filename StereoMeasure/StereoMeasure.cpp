@@ -21,15 +21,29 @@ void on_mouse(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号
 }
 
 int main() {
-	VideoCapture lCamera(1);
-	VideoCapture RCamera(0);
+
+	VideoCapture lCamera, RCamera;
+	
+	int lid, rid;
+
+	FileStorage fs;
+
+	fs.open("..\\CameraID.yml", FileStorage::READ);
+
+	if (!fs.isOpened())
+		return -1;
+	fs["LID"] >> lid;
+	fs["RID"] >> rid;
+
+	lCamera.open(lid);
+	RCamera.open(rid);
 
 	if (!lCamera.isOpened()) { cout << "No left camera!" << endl; return -1; }
 	if (!RCamera.isOpened()) { cout << "No right camera!" << endl; return -1; }
 
 	Mat cameraMatrix[2], distCoeffs[2];
 
-	FileStorage fs("..\\intrinsics.yml", FileStorage::READ);
+	fs.open("..\\intrinsics.yml", FileStorage::READ);
 	if (fs.isOpened())
 	{
 		fs["cameraMatrixL"] >> cameraMatrix[0];
