@@ -171,7 +171,7 @@ int main()
 		cout << "Load Params Fail, Please Check Files: Camera" << lid << ".yml And Camera" << rid << ".yml are exist!";
 	}
 
-	cout << "按下 c 来抓取一张图片\n按下 ESC 退出程序" << endl;
+	cout << "按下 C 来抓取一张图片\n按下 ESC 退出程序" << endl;
 
 	int goodFrameCount = 0;
 	while (goodFrameCount < frameNumber) {
@@ -234,7 +234,7 @@ int main()
 	根据实际标定格子的大小来设置
 	*/
 	calRealPoint(objRealPoint, boardWidth, boardHeight, frameNumber, squareSize);
-	cout << "cal real successful" << endl;
+	//cout << "cal real successful" << endl;
 
 	/*
 	标定摄像头
@@ -266,17 +266,13 @@ int main()
 	ininUndistortRectifyMap()的参数newCameraMatrix就是校正后的摄像机矩阵。在openCV里面，校正后的计算机矩阵Mrect是跟投影矩阵P一起返回的。
 	所以我们在这里传入投影矩阵P，此函数可以从投影矩阵P中读出校正后的摄像机矩阵
 	*/
-	initUndistortRectifyMap(cameraMatrixL, distCoeffL, Rl, Pr, imageSize, CV_32FC1, mapLx, mapLy);
+	initUndistortRectifyMap(cameraMatrixL, distCoeffL, Rl, Pl, imageSize, CV_32FC1, mapLx, mapLy);
 	initUndistortRectifyMap(cameraMatrixR, distCoeffR, Rr, Pr, imageSize, CV_32FC1, mapRx, mapRy);
 
 	/*保存并输出数据*/
 	outputCameraParam();
-
-
-	destroyWindow("Camera L");
-	destroyWindow("Camera R");
-	destroyWindow("Chessboard L");
-	destroyWindow("Chessboard R");
+	
+	destroyAllWindows();
 
 	Mat rectifyImageL, rectifyImageR;
 

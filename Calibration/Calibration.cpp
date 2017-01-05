@@ -134,7 +134,7 @@ int main()
 	imageWidth = capture.get(CAP_PROP_FRAME_WIDTH);
 	imageHeight = capture.get(CAP_PROP_FRAME_HEIGHT);
 
-	cout << "按下 c 来抓取一张图片\n按下 ESC 退出程序" << endl;
+	cout << "按下 C 来抓取一张图片\n按下 ESC 退出程序" << endl;
 
 	while (goodFrameCount < frameNumber) {
 		capture >> rgbImage;
@@ -187,16 +187,18 @@ int main()
 
 	/*设置实际初始参数 根据calibrateCamera来 如果flag = 0 也可以不进行设置*/
 	guessCameraParam();
-	cout << "guess successful" << endl;
+	//cout << "guess successful" << endl;
 	/*计算实际的校正点的三维坐标*/
 	calRealPoint(objRealPoint, boardWidth, boardHeight, frameNumber, squareSize);
-	cout << "cal real successful" << endl;
+	//cout << "cal real successful" << endl;
 	/*标定摄像头*/
 	calibrateCamera(objRealPoint, corners, Size(imageWidth, imageHeight), intrinsic, distortion_coeff, rvecs, tvecs, 0);
-	cout << "calibration successful" << endl;
+	//cout << "calibration successful" << endl;
 	/*保存并输出参数*/
 	outputCameraParam();
-	cout << "out successful" << endl;
+	//cout << "out successful" << endl;
+
+	destroyAllWindows();
 
 	/*显示畸变校正效果*/
 	Mat cImage;
