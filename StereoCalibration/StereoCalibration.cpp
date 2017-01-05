@@ -13,8 +13,8 @@
 using namespace std;
 using namespace cv;
 
-const int imageWidth = 640;								//摄像头的分辨率
-const int imageHeight = 480;
+int imageWidth;								//摄像头的分辨率
+int imageHeight;
 const int boardWidth = 7;								//横向的角点数目
 const int boardHeight = 7;								//纵向的角点数据
 const int boardCorner = boardWidth * boardHeight;		//总的角点数据
@@ -166,6 +166,9 @@ int main()
 		lCapture.open(lid);
 		rCapture.open(rid);
 	}
+
+	imageWidth = lCapture.get(CAP_PROP_FRAME_WIDTH);
+	imageHeight = lCapture.get(CAP_PROP_FRAME_HEIGHT);
 
 	if (!loadCameraParams()) {
 		cout << "Load Params Fail, Please Check Files: Camera" << lid << ".yml And Camera" << rid << ".yml are exist!";
