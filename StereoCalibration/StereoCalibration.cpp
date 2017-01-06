@@ -145,7 +145,10 @@ bool loadStereoCalibrationParams(void) {
 		return false;
 	fs["LID"] >> lid;
 	fs["RID"] >> rid;
-	
+	fs["W"] >> imageWidth;
+	fs["H"] >> imageHeight;
+	initImageSize();
+
 	fs.open("..\\intrinsics.yml", FileStorage::READ);
 
 	if (!fs.isOpened())
@@ -218,7 +221,7 @@ void outputCameraParam(void)
 	
 	fs.open("..\\CameraID.yml", FileStorage::WRITE);
 	if (fs.isOpened()) {
-		fs << "LID" << lid << "RID" << rid;
+		fs << "LID" << lid << "RID" << rid << "W" << imageWidth << "H" << imageHeight;
 		fs.release();
 	}
 
@@ -313,7 +316,7 @@ void showRectifyImage(void) {
 		Mat canvas;
 		double sf;
 		int w, h;
-		sf = 600. / MAX(imageSize.width, imageSize.height);
+		sf = 640. / MAX(imageSize.width, imageSize.height);
 		w = cvRound(imageSize.width * sf);
 		h = cvRound(imageSize.height * sf);
 		canvas.create(h, w * 2, CV_8UC3);
@@ -325,8 +328,6 @@ void showRectifyImage(void) {
 			cvRound(validROIL.width*sf), cvRound(validROIL.height*sf));
 		rectangle(canvasPartL, vroiL, Scalar(0, 0, 255), 3, 8);						//画上一个矩形
 
-																					//cout << "Painted ImageL" << endl;
-
 																					/*右图像画到画布上*/
 		Mat canvasPartR = canvas(Rect(w, 0, w, h));										//获得画布的另一部分
 		resize(rectifyImageR, canvasPartR, canvasPartR.size(), 0, 0, INTER_LINEAR);
@@ -335,6 +336,12 @@ void showRectifyImage(void) {
 		rectangle(canvasPartR, vroiR, Scalar(0, 255, 0), 3, 8);
 
 		validROI = vroiL & vroiR;
+
+		if (validROI.size().area() == 0) {
+			cout << "ROI EMPTY" << vroiL.size().area() << " " << vroiR.size().area() << endl;
+			system("pause");
+			break;
+		}
 
 		Mat lImg = canvasPartL(validROI).clone();
 		Mat rImg = canvasPartR(validROI).clone();
@@ -364,10 +371,11 @@ void showRectifyImage(void) {
 
 int main()
 {
+	/*
 	if (loadStereoCalibrationParams()) {
 		showRectifyImage();
 		return 0;
-	}
+	}*/
 
 
 	cout << "进行双目标定，请先确认已进行单目标定\n请输入左摄像头和右摄像头的ID：";
@@ -399,8 +407,8 @@ int main()
 	
 		cvtColor(rgbImageL, grayImageL, CV_BGR2GRAY);
 		cvtColor(rgbImageR, grayImageR, CV_BGR2GRAY);
-		imshow("Camera L", rgbImageL);
-		imshow("Camera R", rgbImageR);
+		imshow("Camera L", grayImageL);
+		imshow("Camera R", grayImageR);
 
 		char c = waitKey(10);
 
@@ -410,10 +418,20 @@ int main()
 
 			bool isFindL, isFindR;
 
-			isFindL = findChessboardCorners(rgbImageL, boardSize, cornerL);
-			isFindR = findChessboardCorners(rgbImageR, boardSize, cornerR);
+			isFindL = findChessboardCorners(grayImageL, boardSize, cornerL);
+			isFindR = findChessboardCorners(grayImageR, boardSize, cornerR);
 			if (isFindL && isFindR )	 //如果两幅图像都找到了所有的角点 则说明这两幅图像是可行的
 			{
+
+
+				char filename[100];
+				/*读取左边的图像*/
+				sprintf_s(filename, "..\\image2\\left%02d.jpg", goodFrameCount + 1);
+				imwrite(filename, rgbImageL);
+				sprintf_s(filename, "..\\image2\\right%02d.jpg", goodFrameCount + 1);
+				imwrite(filename, rgbImageR);
+
+
 				/*
 				Size(5,5) 搜索窗口的一半大小
 				Size(-1,-1) 死区的一半尺寸
@@ -437,6 +455,8 @@ int main()
 				*/
 				goodFrameCount++;
 
+
+
 				cout << "The " << goodFrameCount << "/" << frameNumber << " image is good" << endl;
 			}
 			else
@@ -448,12 +468,14 @@ int main()
 
 	}
 
+	destroyAllWindows();
+
 	/*
 	计算实际的校正点的三维坐标
 	根据实际标定格子的大小来设置
 	*/
 	calRealPoint(objRealPoint, boardWidth, boardHeight, frameNumber, squareSize);
-	//cout << "cal real successful" << endl;
+	cout << "cal real successful" << endl;
 
 	/*
 	标定摄像头
@@ -467,7 +489,10 @@ int main()
 		CALIB_USE_INTRINSIC_GUESS,
 		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, 1e-5));
 
+
+
 	cout << "Stereo Calibration done with RMS error = " << rms << endl;
+
 
 	/*
 	立体校正的时候需要两幅图像共面并且行对准 以使得立体匹配更加的可靠

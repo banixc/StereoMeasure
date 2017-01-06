@@ -13,12 +13,22 @@ using namespace cv;
 #define USE_SGBM true
 #define USE_BM false
 
+
+Mat sgbmDisparityShow;
+Mat sgbmDisp8U;
+
+Vec3b get_distance(int x, int y) {
+	return sgbmDisp8U.at<Vec3b>(x, y);
+}
+
+
 void on_mouse(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号，x,y鼠标坐标，flags拖拽和键盘操作的代号  
 {
 	if (event == CV_EVENT_LBUTTONUP) {
-		cout << x << " " << y << endl;
+		cout << x << " " << y << " " << get_distance(x,y) << endl;
 	}
 }
+
 
 int main() {
 
@@ -205,17 +215,18 @@ int main() {
 
 
 			Mat sgbmDisp16S = Mat(lImg.rows, lImg.cols, CV_16S);
-			Mat sgbmDisp8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
+			sgbmDisp8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
 			sgbm->compute(lImg, rImg, sgbmDisp16S);
 
 			sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
 			compare(sgbmDisp16S, 0, Mask, CMP_GE);
+			imshow("sgbmDisp8U", sgbmDisp8U);
 			applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
-			Mat sgbmDisparityShow;
+			sgbmDisparityShow;
 			sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
+			setMouseCallback("sgbmDisp8U", on_mouse, 0);
 
-			imshow("sgbmDisparity", sgbmDisparityShow);
-			//setMouseCallback("sgbmDisparity", on_mouse, 0);
+			//imshow("sgbmDisparity", sgbmDisp8U);
 		}
 		char c = waitKey(1);
 		if (c == 27)
