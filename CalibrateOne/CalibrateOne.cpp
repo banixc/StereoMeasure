@@ -13,11 +13,11 @@ using namespace cv;
 
 const int imageWidth = 640;								//摄像头的分辨率
 const int imageHeight = 480;
-const int boardWidth = 7;								//横向的角点数目
-const int boardHeight = 7;								//纵向的角点数据
+const int boardWidth = 9;								//横向的角点数目
+const int boardHeight = 6;								//纵向的角点数据
 const int boardCorner = boardWidth * boardHeight;		//总的角点数据
-const int frameNumber = 10;								//相机标定时需要采用的图像帧数
-const int squareSize = 20;								//标定板黑白格子的大小 单位mm
+const int frameNumber = 9;								//相机标定时需要采用的图像帧数
+const int squareSize = 50;								//标定板黑白格子的大小 单位mm
 const Size boardSize = Size(boardWidth, boardHeight);	//
 
 int id = 1;
@@ -65,7 +65,7 @@ void guessCameraParam(void)
 	0 fy cy
 	0 0  1
 	*/
-	
+	/*
 	intrinsic.at<double>(0, 0) = 256.8093262;   //fx		
 	intrinsic.at<double>(0, 2) = 160.2826538;   //cx
 	intrinsic.at<double>(1, 1) = 254.7511139;   //fy
@@ -76,7 +76,7 @@ void guessCameraParam(void)
 	intrinsic.at<double>(2, 0) = 0;
 	intrinsic.at<double>(2, 1) = 0;
 	intrinsic.at<double>(2, 2) = 1;
-	
+	*/
 	/*
 	k1 k2 p1 p2 p3
 	*/
@@ -86,7 +86,7 @@ void guessCameraParam(void)
 	distortion_coeff.at<double>(2, 0) = 0.028980;   //p1
 	distortion_coeff.at<double>(3, 0) = 0.008136;   //p2
 	distortion_coeff.at<double>(4, 0) = 0;		  //p3
-	
+	*/
 }
 
 void outputCameraParam(void)
@@ -128,7 +128,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	while (goodFrameCount < frameNumber)
 	{
 		char filename[100];
-		sprintf_s(filename, "..\\image2\\left%02d.jpg", goodFrameCount + 1);
+		sprintf_s(filename, "..\\image\\right%02d.jpg", goodFrameCount + 1);
 		//	cout << filename << endl;
 		rgbImage = imread(filename, CV_LOAD_IMAGE_COLOR);
 		cvtColor(rgbImage, grayImage, CV_BGR2GRAY);

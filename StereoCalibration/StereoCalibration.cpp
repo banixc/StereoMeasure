@@ -20,7 +20,7 @@ using namespace cv;
 int imageWidth;											//摄像头的分辨率
 int imageHeight;
 const int boardWidth = 7;								//横向的角点数目
-const int boardHeight = 7;								//纵向的角点数据
+const int boardHeight = 6;								//纵向的角点数据
 const int boardCorner = boardWidth * boardHeight;		//总的角点数据
 const int frameNumber = 10;								//相机标定时需要采用的图像帧数
 const int squareSize = 20;								//标定板黑白格子的大小 单位mm
@@ -285,10 +285,10 @@ void showSGBM(Mat& l, Mat& r) {
 	sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
 	compare(sgbmDisp16S, 0, Mask, CMP_GE);
 	applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
-	Mat sgbmDisparityShow;
-	sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
+	//Mat sgbmDisparityShow;
+	//sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
 
-	imshow("sgbmDisparity", sgbmDisparityShow);
+	imshow("SGBM", sgbmDisp8U);
 	//setMouseCallback("sgbmDisparity", on_mouse, 0);
 }
 
@@ -350,7 +350,7 @@ void showRectifyImage(void) {
 		for (int i = 0; i < canvas.rows; i += 16)
 			line(canvas, Point(0, i), Point(canvas.cols, i), Scalar(0, 255, 0), 1, 8);
 
-		imshow("Rectified", canvas);
+		imshow("RECTIFIED", canvas);
 
 		cvtColor(lImg, lImg, CV_BGR2GRAY);
 		cvtColor(rImg, rImg, CV_BGR2GRAY);
@@ -457,11 +457,11 @@ int main()
 
 
 
-				cout << "The " << goodFrameCount << "/" << frameNumber << " image is good" << endl;
+				cout << "第 " << goodFrameCount << "/" << frameNumber << " 张图片已采集" << endl;
 			}
 			else
 			{
-				cout << "The " << (isFindL?"R":"L") << " image is bad please try again" << endl;
+				cout << (isFindL?"右":"左") << "图无法找到所有角点，请重试！" << endl;
 			}
 
 		}
@@ -475,7 +475,7 @@ int main()
 	根据实际标定格子的大小来设置
 	*/
 	calRealPoint(objRealPoint, boardWidth, boardHeight, frameNumber, squareSize);
-	cout << "cal real successful" << endl;
+	//cout << "cal real successful" << endl;
 
 	/*
 	标定摄像头
@@ -491,7 +491,7 @@ int main()
 
 
 
-	cout << "Stereo Calibration done with RMS error = " << rms << endl;
+	cout << "RMS: " << rms << endl;
 
 
 	/*

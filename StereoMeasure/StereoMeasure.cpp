@@ -10,24 +10,110 @@
 using namespace std;
 using namespace cv;
 
-#define USE_SGBM true
-#define USE_BM false
+//#define USE_SGBM false
+#define USE_BM true
 
+//Mat disparityShow;
+//Mat sgbmDisparityShow;
+//Mat sgbmDisp8U;
+Mat XYZ;
+Rect vroi;
 
-Mat sgbmDisparityShow;
-Mat sgbmDisp8U;
+Mat R, T, E, F;
+Mat R1, R2, P1, P2, Q;
 
-Vec3b get_distance(int x, int y) {
-	return sgbmDisp8U.at<Vec3b>(x, y);
+int mx, my;
+
+double get_distance(int x, int y) {
+	return x;
 }
 
+
+void detectDistance(cv::Mat& pointCloud)
+{
+	if (pointCloud.empty())
+	{
+		return;
+	}
+
+	// 提取深度图像
+	vector<cv::Mat> xyzSet;
+	split(pointCloud, xyzSet);
+	cv::Mat depth;
+	xyzSet[2].copyTo(depth);
+
+	// 根据深度阈值进行二值化处理
+	double maxVal = 0, minVal = 0;
+	cv::Mat depthThresh = cv::Mat::zeros(depth.rows, depth.cols, CV_8UC1);
+	cv::minMaxLoc(depth, &minVal, &maxVal);
+	double thrVal = minVal * 1.5;
+	threshold(depth, depthThresh, thrVal, 255, CV_THRESH_BINARY_INV);
+	depthThresh.convertTo(depthThresh, CV_8UC1);
+	//imageDenoising(depthThresh, 3);
+
+	double  distance = depth.at<float>(my, mx);
+	cout << " " << distance/2 << "CM" << endl;
+
+}
 
 void on_mouse(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号，x,y鼠标坐标，flags拖拽和键盘操作的代号  
 {
+	mx = x - vroi.x;
+	my = y - vroi.y;
 	if (event == CV_EVENT_LBUTTONUP) {
-		cout << x << " " << y << " " << get_distance(x,y) << endl;
+		cout << mx << " " << my << " "
+			//<< (uint)get_distance(x,y)
+			//<< endl
+			;
+		detectDistance(XYZ);
 	}
 }
+
+void on_mouse2(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号，x,y鼠标坐标，flags拖拽和键盘操作的代号  
+{
+	mx = x;
+	my = y;
+	if (event == CV_EVENT_LBUTTONUP) {
+		cout << mx << " " << my << " "
+			//<< (uint)get_distance(x,y)
+			//<< endl
+			;
+		//cout << " COL: " << XYZ.cols << " MUL: " << XYZ.rows;
+		detectDistance(XYZ);
+	}
+}
+
+
+int getPointClouds(cv::Mat& disparity, cv::Mat& pointClouds)
+{
+	if (disparity.empty())
+	{
+		return 0;
+	}
+
+	//计算生成三维点云
+	//  cv::reprojectImageTo3D(disparity, pointClouds, m_Calib_Mat_Q, true);
+
+	reprojectImageTo3D(disparity, pointClouds, Q, true);
+
+	pointClouds *= 1.6;
+
+
+	for (int y = 0; y < pointClouds.rows; ++y)
+	{
+		for (int x = 0; x < pointClouds.cols; ++x)
+		{
+			cv::Point3f point = pointClouds.at<cv::Point3f>(y, x);
+			point.y = -point.y;
+			pointClouds.at<cv::Point3f>(y, x) = point;
+		}
+	}
+
+
+
+	return 1;
+}
+
 
 
 int main() {
@@ -65,8 +151,7 @@ int main() {
 	else
 		cout << "Error: can not load the intrinsic parameters\n";
 
-	Mat R, T, E, F;
-	Mat R1, R2, P1, P2, Q;
+
 	Rect validRoi[2];
 	Size imageSize(lCamera.get(CAP_PROP_FRAME_WIDTH), lCamera.get(CAP_PROP_FRAME_HEIGHT));
 
@@ -151,6 +236,7 @@ int main() {
 		if (lSrc.empty() || rSrc.empty())
 			continue;
 
+
 		remap(lSrc, rimg, rmap[0][0], rmap[0][1], INTER_LINEAR);
 		rimg.copyTo(cimg);
 		Mat canvasPart1 = !isVerticalStereo ? canvas(Rect(w * 0, 0, w, h)) : canvas(Rect(0, h * 0, w, h));
@@ -165,7 +251,7 @@ int main() {
 		Rect vroi2 = Rect(cvRound(validRoi[1].x*sf), cvRound(validRoi[1].y*sf),
 			cvRound(validRoi[1].width*sf), cvRound(validRoi[1].height*sf));
 
-		Rect vroi = vroi1&vroi2;
+		vroi = vroi1&vroi2;
 
 		lImg = canvasPart1(vroi).clone();
 		rImg = canvasPart2(vroi).clone();
@@ -173,6 +259,8 @@ int main() {
 		//标记区域
 		rectangle(canvasPart1, vroi1, Scalar(0, 0, 255), 3, 8);
 		rectangle(canvasPart2, vroi2, Scalar(255, 0, 0), 3, 8);
+
+		rectangle(canvasPart1, vroi, Scalar(0, 255, 0), 3, 8);
 
 		if (!isVerticalStereo)
 			for (int j = 0; j < canvas.rows; j += 32)
@@ -182,6 +270,7 @@ int main() {
 				line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
 
 		imshow("Rectified", canvas);
+		setMouseCallback("Rectified", on_mouse, 0);
 
 		if (lImg.empty() || rImg.empty())
 		{
@@ -206,11 +295,12 @@ int main() {
 			applyColorMap(imgDisparity8U, imgDisparity8U, COLORMAP_HSV);
 			Mat disparityShow;
 			imgDisparity8U.copyTo(disparityShow, Mask);
-			imshow("bmDisparity", disparityShow);
-			//setMouseCallback("bmDisparity", on_mouse, 0);
+			getPointClouds(imgDisparity16S, XYZ);
+			imshow("BM算法视差图", disparityShow);
+			setMouseCallback("BM算法视差图", on_mouse2, 0);
 
 		}
-
+		/*
 		if (USE_SGBM) {
 
 
@@ -220,14 +310,16 @@ int main() {
 
 			sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
 			compare(sgbmDisp16S, 0, Mask, CMP_GE);
-			imshow("sgbmDisp8U", sgbmDisp8U);
+			imshow("SGBM算法视差图", sgbmDisp8U);
 			applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
 			sgbmDisparityShow;
 			sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
-			setMouseCallback("sgbmDisp8U", on_mouse, 0);
+			getPointClouds(sgbmDisp8U, XYZ);
 
 			//imshow("sgbmDisparity", sgbmDisp8U);
 		}
+
+		*/
 		char c = waitKey(1);
 		if (c == 27)
 			break;

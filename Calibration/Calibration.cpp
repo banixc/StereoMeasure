@@ -7,14 +7,14 @@
 using namespace std;
 using namespace cv;
 
-int imageWidth = 0;								//摄像头的分辨率
+int imageWidth = 0;										//摄像头的分辨率
 int imageHeight = 0;
 const int boardWidth = 7;								//横向的角点数目
-const int boardHeight = 7;								//纵向的角点数据
+const int boardHeight = 6;								//纵向的角点数据
 const int boardCorner = boardWidth * boardHeight;		//总的角点数据
 const int frameNumber = 10;								//相机标定时需要采用的图像帧数
 const int squareSize = 20;								//标定板黑白格子的大小 单位mm
-const Size boardSize = Size(boardWidth, boardHeight);	//
+const Size boardSize = Size(boardWidth, boardHeight);	
 
 int id;													//摄像机序号
 
@@ -158,15 +158,15 @@ int main()
 				*/
 				cornerSubPix(grayImage, corner, Size(5, 5), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 20, 0.1));
 				drawChessboardCorners(rgbImage, boardSize, corner, isFind);
-				imshow("chessboard", rgbImage);
+				imshow("棋盘格", rgbImage);
 				corners.push_back(corner);
 
 				goodFrameCount++;
-				cout << "The " << goodFrameCount << "/" << frameNumber <<" image is good" << endl;
+				cout << "第 " << goodFrameCount << "/" << frameNumber <<" 张图片已采集" << endl;
 			}
 			else
 			{
-				cout << "The image is bad please try again" << endl;
+				cout << "无法找到所有角点，请重试！" << endl;
 			}
 		}
 	}
@@ -205,7 +205,7 @@ int main()
 	while (true) {
 		capture >> rgbImage;
 		undistort(rgbImage, cImage, intrinsic, distortion_coeff);
-		imshow("Corret Image", cImage);
+		imshow("修正后的图像", cImage);
 		char c = waitKey(1);
 		if (c == 27)
 			break;

@@ -186,12 +186,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		char filename[100];
 		/*¶ÁÈ¡×ó±ßµÄÍ¼Ïñ*/
-		sprintf_s(filename, "..\\image2\\left%02d.jpg", goodFrameCount + 1);
+		sprintf_s(filename, "..\\image\\left%02d.jpg", goodFrameCount + 1);
 		rgbImageL = imread(filename, CV_LOAD_IMAGE_COLOR);
 		cvtColor(rgbImageL, grayImageL, CV_BGR2GRAY);
 
 		/*¶ÁÈ¡ÓÒ±ßµÄÍ¼Ïñ*/
-		sprintf_s(filename, "..\\image2\\right%02d.jpg", goodFrameCount + 1);
+		sprintf_s(filename, "..\\image\\right%02d.jpg", goodFrameCount + 1);
 		rgbImageR = imread(filename, CV_LOAD_IMAGE_COLOR);
 		cvtColor(rgbImageR, grayImageR, CV_BGR2GRAY);
 
