@@ -5,10 +5,6 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 
-
-#define SHOW_BM false
-#define SHOW_SGBM true
-
 //在进行双目摄像头的标定之前，最好事先分别对两个摄像头进行单目视觉的标定 
 //分别确定两个摄像头的内参矩阵，然后再开始进行双目摄像头的标定
 //在此例程中是先对两个摄像头进行单独标定(见上一篇单目标定文章)，然后在进行立体标定
@@ -61,20 +57,7 @@ Ptr<StereoBM> sbm = StereoBM::create(16 * 5, 31);
 //    sbm->setSpeckleRange(32);
 //    sbm->setSpeckleWindowSize(100);
 
-Ptr<StereoSGBM> sgbm = StereoSGBM::create(0, 64, 7,
-	10 * 7 * 7,
-	40 * 7 * 7,
-	1, 63, 10, 100, 32, StereoSGBM::MODE_SGBM);
 
-void initImageSize() {
-	imageSize = Size(imageWidth, imageHeight);
-}
-
-void error(const char* msg) {
-	destroyAllWindows();
-	cout << msg << endl;
-	system("pause");
-}
 
 // 从文件中获取相机标定参数
 bool loadCameraParams(void) {
@@ -83,7 +66,7 @@ bool loadCameraParams(void) {
 	double fx, cx, fy, cy, k1, k2, p1, p2, p3;
 	FileStorage fs;
 
-	sprintf_s(filename, 64, "..\\Camera%d.yml", lid);
+	sprintf_s(filename, 64, "..\\camera%d.yml", lid);
 	fs.open(filename, FileStorage::READ);
 
 	if (!fs.isOpened())
@@ -147,7 +130,7 @@ bool loadStereoCalibrationParams(void) {
 	fs["RID"] >> rid;
 	fs["W"] >> imageWidth;
 	fs["H"] >> imageHeight;
-	initImageSize();
+	imageSize = Size(imageWidth, imageHeight);
 
 	fs.open("..\\intrinsics.yml", FileStorage::READ);
 
@@ -159,12 +142,6 @@ bool loadStereoCalibrationParams(void) {
 	fs["cameraMatrixR"] >> cameraMatrixR;
 	fs["cameraDistcoeffR"] >> distCoeffR;
 	fs.release();
-
-
-	//Mat R, T, E, F;
-	//Mat R1, R2, P1, P2, Q;
-	//Rect validRoi[2];
-	//Size imageSize(lCamera.get(CAP_PROP_FRAME_WIDTH), lCamera.get(CAP_PROP_FRAME_HEIGHT));
 
 	fs.open("..\\extrinsics.yml", FileStorage::READ);
 	if (!fs.isOpened())
@@ -197,13 +174,11 @@ bool loadStereoCalibrationParams(void) {
 /*计算标定板上模块的实际物理坐标*/
 void calRealPoint(vector<vector<Point3f>>& obj, int boardwidth, int boardheight, int imgNumber, int squaresize)
 {
-	//	Mat imgpoint(boardheight, boardwidth, CV_32FC3,Scalar(0,0,0));
 	vector<Point3f> imgpoint;
 	for (int rowIndex = 0; rowIndex < boardheight; rowIndex++)
 	{
 		for (int colIndex = 0; colIndex < boardwidth; colIndex++)
 		{
-			//	imgpoint.at<Vec3f>(rowIndex, colIndex) = Vec3f(rowIndex * squaresize, colIndex*squaresize, 0);
 			imgpoint.push_back(Point3f(rowIndex * squaresize, colIndex * squaresize, 0));
 		}
 	}
@@ -230,7 +205,6 @@ void outputCameraParam(void)
 	{
 		fs << "cameraMatrixL" << cameraMatrixL << "cameraDistcoeffL" << distCoeffL << "cameraMatrixR" << cameraMatrixR << "cameraDistcoeffR" << distCoeffR;
 		fs.release();
-		//cout << "cameraMatrixL=:" << cameraMatrixL << endl << "cameraDistcoeffL=:" << distCoeffL << endl << "cameraMatrixR=:" << cameraMatrixR << endl << "cameraDistcoeffR=:" << distCoeffR << endl;
 	}
 	else
 	{
@@ -241,7 +215,6 @@ void outputCameraParam(void)
 	if (fs.isOpened())
 	{
 		fs << "R" << R << "T" << T << "Rl" << Rl << "Rr" << Rr << "Pl" << Pl << "Pr" << Pr << "Q" << Q;
-		//cout << "R=" << R << endl << "T=" << T << endl << "Rl=" << Rl << endl << "Rr=" << Rr << endl << "Pl=" << Pl << endl << "Pr=" << Pr << endl << "Q=" << Q << endl;
 		fs.release();
 	}
 	else
@@ -270,34 +243,14 @@ void showBM(Mat& l, Mat& r) {
 	applyColorMap(imgDisparity8U, imgDisparity8U, COLORMAP_HSV);
 	Mat disparityShow;
 	imgDisparity8U.copyTo(disparityShow, Mask);
-	imshow("bmDisparity", disparityShow);
-	//setMouseCallback("bmDisparity", on_mouse, 0);
+	imshow("BM", disparityShow);
 
-}
-
-void showSGBM(Mat& l, Mat& r) {
-
-
-	Mat sgbmDisp16S = Mat(l.rows, l.cols, CV_16S);
-	Mat sgbmDisp8U = Mat(l.rows, l.cols, CV_8UC1);
-	sgbm->compute(l, r, sgbmDisp16S);
-
-	sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
-	compare(sgbmDisp16S, 0, Mask, CMP_GE);
-	applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
-	//Mat sgbmDisparityShow;
-	//sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
-
-	imshow("SGBM", sgbmDisp8U);
-	//setMouseCallback("sgbmDisparity", on_mouse, 0);
 }
 
 
 void showRectifyImage(void) {
 
 	destroyAllWindows();
-
-	initImageSize();
 
 	Mat rectifyImageL, rectifyImageR;
 
@@ -311,7 +264,6 @@ void showRectifyImage(void) {
 		/*
 		把校正结果显示出来
 		把左右两幅图像显示到同一个画面上
-		这里只显示了最后一副图像的校正结果。并没有把所有的图像都显示出来
 		*/
 		Mat canvas;
 		double sf;
@@ -322,13 +274,13 @@ void showRectifyImage(void) {
 		canvas.create(h, w * 2, CV_8UC3);
 
 		/*左图像画到画布上*/
-		Mat canvasPartL = canvas(Rect(w * 0, 0, w, h));								//得到画布的一部分
+		Mat canvasPartL = canvas(Rect(w * 0, 0, w, h));									//得到画布的一部分
 		resize(rectifyImageL, canvasPartL, canvasPartL.size(), 0, 0, INTER_AREA);		//把图像缩放到跟canvasPart一样大小
-		Rect vroiL(cvRound(validROIL.x*sf), cvRound(validROIL.y*sf),				//获得被截取的区域	
+		Rect vroiL(cvRound(validROIL.x*sf), cvRound(validROIL.y*sf),					//获得被截取的区域	
 			cvRound(validROIL.width*sf), cvRound(validROIL.height*sf));
-		rectangle(canvasPartL, vroiL, Scalar(0, 0, 255), 3, 8);						//画上一个矩形
+		rectangle(canvasPartL, vroiL, Scalar(0, 0, 255), 3, 8);							//画上一个矩形
 
-																					/*右图像画到画布上*/
+		/*右图像画到画布上*/
 		Mat canvasPartR = canvas(Rect(w, 0, w, h));										//获得画布的另一部分
 		resize(rectifyImageR, canvasPartR, canvasPartR.size(), 0, 0, INTER_LINEAR);
 		Rect vroiR(cvRound(validROIR.x * sf), cvRound(validROIR.y*sf),
@@ -355,11 +307,7 @@ void showRectifyImage(void) {
 		cvtColor(lImg, lImg, CV_BGR2GRAY);
 		cvtColor(rImg, rImg, CV_BGR2GRAY);
 
-
-		if (SHOW_BM)
-			showBM(lImg, rImg);
-		if (SHOW_SGBM)
-			showSGBM(lImg, rImg);
+		showBM(lImg, rImg);
 
 		char c = waitKey(1);
 		if (c == 27)
@@ -371,12 +319,6 @@ void showRectifyImage(void) {
 
 int main()
 {
-	/*
-	if (loadStereoCalibrationParams()) {
-		showRectifyImage();
-		return 0;
-	}*/
-
 
 	cout << "进行双目标定，请先确认已进行单目标定\n请输入左摄像头和右摄像头的ID：";
 	cin >> lid >> rid;
@@ -392,10 +334,11 @@ int main()
 
 	imageWidth = lCapture.get(CAP_PROP_FRAME_WIDTH);
 	imageHeight = lCapture.get(CAP_PROP_FRAME_HEIGHT);
-	initImageSize();
+	imageSize = Size(imageWidth, imageHeight);
 
 	if (!loadCameraParams()) {
-		cout << "Load Params Fail, Please Check Files: Camera" << lid << ".yml And Camera" << rid << ".yml are exist!";
+		cout << "无法加载所有的相机参数！";
+		return -1;
 	}
 
 	cout << "按下 C 来抓取一张图片\n按下 ESC 退出程序" << endl;
@@ -415,23 +358,10 @@ int main()
 		if (c == 27) //退出
 			return 0;
 		else if (c == 'c') {//拍照并检测
-
-			bool isFindL, isFindR;
-
-			isFindL = findChessboardCorners(grayImageL, boardSize, cornerL);
-			isFindR = findChessboardCorners(grayImageR, boardSize, cornerR);
+			bool isFindL = findChessboardCorners(grayImageL, boardSize, cornerL);
+			bool isFindR = findChessboardCorners(grayImageR, boardSize, cornerR);
 			if (isFindL && isFindR )	 //如果两幅图像都找到了所有的角点 则说明这两幅图像是可行的
 			{
-
-
-				char filename[100];
-				/*读取左边的图像*/
-				sprintf_s(filename, "..\\image2\\left%02d.jpg", goodFrameCount + 1);
-				imwrite(filename, rgbImageL);
-				sprintf_s(filename, "..\\image2\\right%02d.jpg", goodFrameCount + 1);
-				imwrite(filename, rgbImageR);
-
-
 				/*
 				Size(5,5) 搜索窗口的一半大小
 				Size(-1,-1) 死区的一半尺寸
@@ -448,14 +378,7 @@ int main()
 				imshow("Chessboard R", rgbImageR);
 				imagePointR.push_back(cornerR);
 
-				/*
-				本来应该判断这两幅图像是不是好的，如果可以匹配的话才可以用来标定
-				但是在这个例程当中，用的图像是系统自带的图像，都是可以匹配成功的。
-				所以这里就没有判断
-				*/
 				goodFrameCount++;
-
-
 
 				cout << "第 " << goodFrameCount << "/" << frameNumber << " 张图片已采集" << endl;
 			}
@@ -475,7 +398,6 @@ int main()
 	根据实际标定格子的大小来设置
 	*/
 	calRealPoint(objRealPoint, boardWidth, boardHeight, frameNumber, squareSize);
-	//cout << "cal real successful" << endl;
 
 	/*
 	标定摄像头
@@ -489,10 +411,7 @@ int main()
 		CALIB_USE_INTRINSIC_GUESS,
 		TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, 1e-5));
 
-
-
 	cout << "RMS: " << rms << endl;
-
 
 	/*
 	立体校正的时候需要两幅图像共面并且行对准 以使得立体匹配更加的可靠
@@ -517,36 +436,11 @@ int main()
 	*/
 	initUndistortRectifyMap(cameraMatrixL, distCoeffL, Rl, Pl, imageSize, CV_32FC1, mapLx, mapLy);
 	initUndistortRectifyMap(cameraMatrixR, distCoeffR, Rr, Pr, imageSize, CV_32FC1, mapRx, mapRy);
-	/*
-		if (mapLx.empty() || mapLy.empty()) {
-		error("Error! L RectifyMap is empty!");
-		return -1;
-	} 
-
-	if (mapRx.empty() || mapRy.empty()) {
-		error("Error! R RectifyMap is empty!");
-		return -1;
-	}*/
 
 	/*保存并输出数据*/
 	outputCameraParam();
 	
 	showRectifyImage();
-
-	//cvtColor(grayImageL, rectifyImageL, CV_GRAY2BGR);
-	//cvtColor(grayImageR, rectifyImageR, CV_GRAY2BGR);
-
-	//imshow("Before Rectify L", rectifyImageL);
-	//imshow("Before Rectify R", rectifyImageR);
-	/*
-	经过remap之后，左右相机的图像已经共面并且行对准了
-	*/
-
-
-	//imshow("After Rectify L", rectifyImageL);
-	//imshow("After Rectify R", rectifyImageR);
-
-
 
 	return 0;
 }

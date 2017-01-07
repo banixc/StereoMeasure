@@ -7,8 +7,6 @@
 using namespace std;
 using namespace cv;
 
-int imageWidth = 0;										//摄像头的分辨率
-int imageHeight = 0;
 const int boardWidth = 7;								//横向的角点数目
 const int boardHeight = 6;								//纵向的角点数据
 const int boardCorner = boardWidth * boardHeight;		//总的角点数据
@@ -32,13 +30,11 @@ vector<Point2f> corner;									//某一副图像找到的角点
 /*计算标定板上模块的实际物理坐标*/
 void calRealPoint(vector<vector<Point3f>>& obj, int boardwidth, int boardheight, int imgNumber, int squaresize)
 {
-	//	Mat imgpoint(boardheight, boardwidth, CV_32FC3,Scalar(0,0,0));
 	vector<Point3f> imgpoint;
 	for (int rowIndex = 0; rowIndex < boardheight; rowIndex++)
 	{
 		for (int colIndex = 0; colIndex < boardwidth; colIndex++)
 		{
-			//	imgpoint.at<Vec3f>(rowIndex, colIndex) = Vec3f(rowIndex * squaresize, colIndex*squaresize, 0);
 			imgpoint.push_back(Point3f(rowIndex * squaresize, colIndex * squaresize, 0));
 		}
 	}
@@ -88,7 +84,7 @@ void outputCameraParam(void)
 {
 	/*输出数据*/
 	char filename[64];
-	sprintf_s(filename,64,"..\\Camera%d.yml",id);
+	sprintf_s(filename,64,"..\\camera%d.yml",id);
 	FileStorage fs(filename, FileStorage::WRITE);
 	if (fs.isOpened())
 	{
@@ -102,7 +98,7 @@ void outputCameraParam(void)
 		fs.release();
 	}
 	else {
-		cout << "Can't open file:" << filename << endl;
+		cout << "无法打开文件: " << filename << endl;
 		cout << "fx :" << intrinsic.at<double>(0, 0) << endl << "fy :" << intrinsic.at<double>(1, 1) << endl;
 		cout << "cx :" << intrinsic.at<double>(0, 2) << endl << "cy :" << intrinsic.at<double>(1, 2) << endl;
 
@@ -120,19 +116,19 @@ int main()
 	Mat rgbImage, grayImage;
 	int goodFrameCount = 0;
 
-	cout << "请输入要标定的摄像头序列号：";
+	cout << "请输入要标定的摄像头序列号:";
 	cin >> id;
 
 	VideoCapture capture(id);
 
 	while (!capture.isOpened()) {
-		std::cout << "无法打开该序列号的摄像头，请重试：";
+		std::cout << "无法打开该序列号的摄像头，请重试:";
 		cin >> id;
 		capture.open(id);
 	}
 
-	imageWidth = capture.get(CAP_PROP_FRAME_WIDTH);
-	imageHeight = capture.get(CAP_PROP_FRAME_HEIGHT);
+	int imageWidth = capture.get(CAP_PROP_FRAME_WIDTH);
+	int imageHeight = capture.get(CAP_PROP_FRAME_HEIGHT);
 
 	cout << "按下 C 来抓取一张图片\n按下 ESC 退出程序" << endl;
 
@@ -187,16 +183,15 @@ int main()
 
 	/*设置实际初始参数 根据calibrateCamera来 如果flag = 0 也可以不进行设置*/
 	guessCameraParam();
-	//cout << "guess successful" << endl;
+
 	/*计算实际的校正点的三维坐标*/
 	calRealPoint(objRealPoint, boardWidth, boardHeight, frameNumber, squareSize);
-	//cout << "cal real successful" << endl;
+
 	/*标定摄像头*/
 	calibrateCamera(objRealPoint, corners, Size(imageWidth, imageHeight), intrinsic, distortion_coeff, rvecs, tvecs, 0);
-	//cout << "calibration successful" << endl;
+
 	/*保存并输出参数*/
 	outputCameraParam();
-	//cout << "out successful" << endl;
 
 	destroyAllWindows();
 

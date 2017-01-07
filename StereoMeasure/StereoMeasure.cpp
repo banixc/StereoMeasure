@@ -10,12 +10,6 @@
 using namespace std;
 using namespace cv;
 
-//#define USE_SGBM false
-#define USE_BM true
-
-//Mat disparityShow;
-//Mat sgbmDisparityShow;
-//Mat sgbmDisp8U;
 Mat XYZ;
 Rect vroi;
 
@@ -23,11 +17,6 @@ Mat R, T, E, F;
 Mat R1, R2, P1, P2, Q;
 
 int mx, my;
-
-double get_distance(int x, int y) {
-	return x;
-}
-
 
 void detectDistance(cv::Mat& pointCloud)
 {
@@ -49,36 +38,18 @@ void detectDistance(cv::Mat& pointCloud)
 	double thrVal = minVal * 1.5;
 	threshold(depth, depthThresh, thrVal, 255, CV_THRESH_BINARY_INV);
 	depthThresh.convertTo(depthThresh, CV_8UC1);
-	//imageDenoising(depthThresh, 3);
 
 	double  distance = depth.at<float>(my, mx);
 	cout << " " << distance/2 << "CM" << endl;
 
 }
 
-void on_mouse(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号，x,y鼠标坐标，flags拖拽和键盘操作的代号  
-{
-	mx = x - vroi.x;
-	my = y - vroi.y;
-	if (event == CV_EVENT_LBUTTONUP) {
-		cout << mx << " " << my << " "
-			//<< (uint)get_distance(x,y)
-			//<< endl
-			;
-		detectDistance(XYZ);
-	}
-}
-
-void on_mouse2(int event, int x, int y, int flags, void *ustc)//event鼠标事件代号，x,y鼠标坐标，flags拖拽和键盘操作的代号  
+void on_mouse(int event, int x, int y, int flags, void *ustc)
 {
 	mx = x;
 	my = y;
 	if (event == CV_EVENT_LBUTTONUP) {
-		cout << mx << " " << my << " "
-			//<< (uint)get_distance(x,y)
-			//<< endl
-			;
-		//cout << " COL: " << XYZ.cols << " MUL: " << XYZ.rows;
+		cout << mx << " " << my << " ";
 		detectDistance(XYZ);
 	}
 }
@@ -91,13 +62,9 @@ int getPointClouds(cv::Mat& disparity, cv::Mat& pointClouds)
 		return 0;
 	}
 
-	//计算生成三维点云
-	//  cv::reprojectImageTo3D(disparity, pointClouds, m_Calib_Mat_Q, true);
-
 	reprojectImageTo3D(disparity, pointClouds, Q, true);
 
 	pointClouds *= 1.6;
-
 
 	for (int y = 0; y < pointClouds.rows; ++y)
 	{
@@ -228,14 +195,13 @@ int main() {
 
 	Mat rimg, cimg;
 	Mat Mask;
-	while (1)
+	while (true)
 	{
 		lCamera >> lSrc;
 		RCamera >> rSrc;
 
 		if (lSrc.empty() || rSrc.empty())
 			continue;
-
 
 		remap(lSrc, rimg, rmap[0][0], rmap[0][1], INTER_LINEAR);
 		rimg.copyTo(cimg);
@@ -259,7 +225,6 @@ int main() {
 		//标记区域
 		rectangle(canvasPart1, vroi1, Scalar(0, 0, 255), 3, 8);
 		rectangle(canvasPart2, vroi2, Scalar(255, 0, 0), 3, 8);
-
 		rectangle(canvasPart1, vroi, Scalar(0, 255, 0), 3, 8);
 
 		if (!isVerticalStereo)
@@ -278,48 +243,24 @@ int main() {
 			return -1;
 		}
 
-
 		cvtColor(lImg, lImg, CV_BGR2GRAY);
 		cvtColor(rImg, rImg, CV_BGR2GRAY);
 
+		Mat imgDisparity16S = Mat(lImg.rows, lImg.cols, CV_16S);
+		Mat imgDisparity8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
 
-		if (USE_BM) {
+		sbm->compute(lImg, rImg, imgDisparity16S);
 
-			Mat imgDisparity16S = Mat(lImg.rows, lImg.cols, CV_16S);
-			Mat imgDisparity8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
-
-			sbm->compute(lImg, rImg, imgDisparity16S);
-
-			imgDisparity16S.convertTo(imgDisparity8U, CV_8UC1, 255.0 / 1000.0);
-			compare(imgDisparity16S, 0, Mask, CMP_GE);
-			applyColorMap(imgDisparity8U, imgDisparity8U, COLORMAP_HSV);
-			Mat disparityShow;
-			imgDisparity8U.copyTo(disparityShow, Mask);
-			getPointClouds(imgDisparity16S, XYZ);
-			imshow("BM算法视差图", disparityShow);
-			setMouseCallback("BM算法视差图", on_mouse2, 0);
-
-		}
-		/*
-		if (USE_SGBM) {
+		imgDisparity16S.convertTo(imgDisparity8U, CV_8UC1, 255.0 / 1000.0);
+		compare(imgDisparity16S, 0, Mask, CMP_GE);
+		applyColorMap(imgDisparity8U, imgDisparity8U, COLORMAP_HSV);
+		Mat disparityShow;
+		imgDisparity8U.copyTo(disparityShow, Mask);
+		getPointClouds(imgDisparity16S, XYZ);
+		imshow("BM算法视差图", disparityShow);
+		setMouseCallback("BM算法视差图", on_mouse, 0);
 
 
-			Mat sgbmDisp16S = Mat(lImg.rows, lImg.cols, CV_16S);
-			sgbmDisp8U = Mat(lImg.rows, lImg.cols, CV_8UC1);
-			sgbm->compute(lImg, rImg, sgbmDisp16S);
-
-			sgbmDisp16S.convertTo(sgbmDisp8U, CV_8UC1, 255.0 / 1000.0);
-			compare(sgbmDisp16S, 0, Mask, CMP_GE);
-			imshow("SGBM算法视差图", sgbmDisp8U);
-			applyColorMap(sgbmDisp8U, sgbmDisp8U, COLORMAP_HSV);
-			sgbmDisparityShow;
-			sgbmDisp8U.copyTo(sgbmDisparityShow, Mask);
-			getPointClouds(sgbmDisp8U, XYZ);
-
-			//imshow("sgbmDisparity", sgbmDisp8U);
-		}
-
-		*/
 		char c = waitKey(1);
 		if (c == 27)
 			break;
