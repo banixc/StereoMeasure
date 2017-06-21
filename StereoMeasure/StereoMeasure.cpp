@@ -40,7 +40,7 @@ void detectDistance(cv::Mat& pointCloud)
 	depthThresh.convertTo(depthThresh, CV_8UC1);
 
 	double  distance = depth.at<float>(my, mx);
-	cout << " " << distance/2 << "CM" << endl;
+	cout << " " << distance << "CM" << endl;
 
 }
 
@@ -141,6 +141,8 @@ int main() {
 		cameraMatrix[1], distCoeffs[1],
 		imageSize, R, T, R1, R2, P1, P2, Q,
 		CALIB_ZERO_DISPARITY, 1, imageSize, &validRoi[0], &validRoi[1]);
+
+	cout << "Tx:" << -1 / Q.at<double>(3, 2) << endl;
 
 	// OpenCV can handle left-right
 	// or up-down camera arrangements

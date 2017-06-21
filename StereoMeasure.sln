@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Calibration", "Calibration\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StereoCalibration", "StereoCalibration\StereoCalibration.vcxproj", "{C4E53847-A17F-470C-B047-F54A65AF6FAC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MatlabCalibration", "MatlabCalibration\MatlabCalibration.vcxproj", "{72EFC75A-7594-4F32-81D1-E062A729835B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -55,6 +57,18 @@ Global
 		{C4E53847-A17F-470C-B047-F54A65AF6FAC}.Release|x64.Build.0 = Release|x64
 		{C4E53847-A17F-470C-B047-F54A65AF6FAC}.Release|x86.ActiveCfg = Release|Win32
 		{C4E53847-A17F-470C-B047-F54A65AF6FAC}.Release|x86.Build.0 = Release|Win32
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.Debug|x64.ActiveCfg = Debug|x64
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.Debug|x64.Build.0 = Debug|x64
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.Debug|x86.ActiveCfg = Debug|Win32
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.Debug|x86.Build.0 = Debug|Win32
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.DefaultDebug|x64.ActiveCfg = Debug|x64
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.DefaultDebug|x64.Build.0 = Debug|x64
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.DefaultDebug|x86.ActiveCfg = Debug|Win32
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.DefaultDebug|x86.Build.0 = Debug|Win32
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.Release|x64.ActiveCfg = Release|x64
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.Release|x64.Build.0 = Release|x64
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.Release|x86.ActiveCfg = Release|Win32
+		{72EFC75A-7594-4F32-81D1-E062A729835B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

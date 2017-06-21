@@ -362,6 +362,15 @@ int main()
 			bool isFindR = findChessboardCorners(grayImageR, boardSize, cornerR);
 			if (isFindL && isFindR )	 //如果两幅图像都找到了所有的角点 则说明这两幅图像是可行的
 			{
+
+				//写入文件
+				char lName[10];
+				char rName[10];
+				sprintf_s(lName, "L%d.jpg",goodFrameCount);
+				sprintf_s(rName, "R%d.jpg", goodFrameCount);
+				imwrite(lName, rgbImageL);
+				imwrite(rName, rgbImageR);
+
 				/*
 				Size(5,5) 搜索窗口的一半大小
 				Size(-1,-1) 死区的一半尺寸
@@ -423,6 +432,7 @@ int main()
 	*/
 	stereoRectify(cameraMatrixL, distCoeffL, cameraMatrixR, distCoeffR, imageSize, R, T, Rl, Rr, Pl, Pr, Q,
 		CALIB_ZERO_DISPARITY, 0, imageSize, &validROIL, &validROIR);
+	cout << "Tx:" << -1 / Q.at<double>(3, 2) << endl;
 
 	mapLx = Mat(imageSize, CV_32FC1);
 	mapLy = Mat(imageSize, CV_32FC1);

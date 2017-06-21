@@ -8,10 +8,10 @@ using namespace std;
 using namespace cv;
 
 const int boardWidth = 7;								//横向的角点数目
-const int boardHeight = 6;								//纵向的角点数据
+const int boardHeight = 5;								//纵向的角点数据
 const int boardCorner = boardWidth * boardHeight;		//总的角点数据
 const int frameNumber = 10;								//相机标定时需要采用的图像帧数
-const int squareSize = 20;								//标定板黑白格子的大小 单位mm
+const int squareSize = 33;								//标定板黑白格子的大小 单位mm
 const Size boardSize = Size(boardWidth, boardHeight);	
 
 int id;													//摄像机序号
@@ -126,6 +126,10 @@ int main()
 		cin >> id;
 		capture.open(id);
 	}
+
+	capture.set(CAP_PROP_FRAME_WIDTH, 640);
+	capture.set(CAP_PROP_FRAME_HEIGHT, 480);
+	capture.set(CV_CAP_PROP_SETTINGS, 1);
 
 	int imageWidth = capture.get(CAP_PROP_FRAME_WIDTH);
 	int imageHeight = capture.get(CAP_PROP_FRAME_HEIGHT);
